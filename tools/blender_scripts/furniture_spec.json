@@ -1,0 +1,53 @@
+{
+ "root": ".",
+ "margin": 0.06,
+ "kits": {
+  "furniture": {"dir": "build/update9/kenney_sources/kenney_furniture-kit/Models/GLTF format", "scale": 2.0},
+  "nature": {"dir": "build/downloads/kenney/kenney_nature-kit/Models/GLTF format", "scale": 2.0}
+ },
+ "models": [
+  {"id": "bed", "fit": [1, 2], "paint": "carpet", "parts": [{"kit": "furniture", "file": "bedSingle"}]},
+  {"id": "double_bed", "fit": [2, 2], "paint": "carpet", "parts": [{"kit": "furniture", "file": "bedDouble"}]},
+  {"id": "nightstand", "fit": [1, 1], "paint": "wood", "glow": ["lamp"], "parts": [
+   {"kit": "furniture", "file": "cabinetBedDrawerTable"},
+   {"kit": "furniture", "file": "lampRoundTable", "on": 0, "at": [0.05, 0, -0.05]}]},
+  {"id": "wardrobe", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "bookcaseClosedDoors"}]},
+  {"id": "dresser", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "sideTableDrawers"}]},
+  {"id": "desk", "fit": [2, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "desk"}]},
+  {"id": "chair", "fit": [1, 1], "paint": "carpet", "parts": [{"kit": "furniture", "file": "chairCushion"}]},
+  {"id": "computer", "fit": [2, 1], "paint": "wood", "parts": [
+   {"kit": "furniture", "file": "desk"},
+   {"kit": "furniture", "file": "computerScreen", "on": 0, "at": [0, 0, -0.18]},
+   {"kit": "furniture", "file": "computerKeyboard", "on": 0, "at": [0, 0, 0.12]},
+   {"kit": "furniture", "file": "computerMouse", "on": 0, "at": [0.38, 0, 0.12]}]},
+  {"id": "bookshelf", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "bookcaseOpen", "books_on_shelves": true}]},
+  {"id": "sofa", "fit": [2, 1], "paint": "carpet", "parts": [{"kit": "furniture", "file": "loungeSofa"}]},
+  {"id": "armchair", "fit": [1, 1], "paint": "carpet", "parts": [{"kit": "furniture", "file": "loungeChair"}]},
+  {"id": "coffee_table", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "tableCoffee"}]},
+  {"id": "tv", "fit": [1, 1], "paint": "wood", "parts": [
+   {"kit": "furniture", "file": "cabinetTelevision"},
+   {"kit": "furniture", "file": "televisionModern", "on": 0, "at": [0, 0, -0.05]}]},
+  {"id": "dining_table", "fit": [2, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "table"}]},
+  {"id": "counter", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "kitchenCabinet"}]},
+  {"id": "sink", "fit": [1, 1], "paint": "wood", "parts": [{"kit": "furniture", "file": "kitchenSink"}]},
+  {"id": "stove", "fit": [1, 1], "paint": "metalDark", "parts": [{"kit": "furniture", "file": "kitchenStove"}]},
+  {"id": "fridge", "fit": [1, 1], "paint": "metalLight", "parts": [{"kit": "furniture", "file": "kitchenFridge"}]},
+  {"id": "toilet", "fit": [1, 1], "paint": "carpetWhite", "parts": [{"kit": "furniture", "file": "toilet"}]},
+  {"id": "bathtub", "fit": [1, 2], "rot": 90, "paint": "metalLight", "parts": [{"kit": "furniture", "file": "bathtub"}]},
+  {"id": "shower", "fit": [1, 1], "paint": "carpetWhite", "parts": [{"kit": "furniture", "file": "shower"}]},
+  {"id": "washbasin", "fit": [1, 1], "paint": "_defaultMat", "parts": [{"kit": "furniture", "file": "bathroomSink"}]},
+  {"id": "washer", "fit": [1, 1], "paint": "metalLight", "parts": [{"kit": "furniture", "file": "washer"}]},
+  {"id": "lamp", "fit": [1, 1], "paint": "lamp", "glow": ["lamp"], "parts": [{"kit": "furniture", "file": "lampRoundFloor"}]},
+  {"id": "plant", "fit": [1, 1], "paint": "plant", "parts": [{"kit": "furniture", "file": "pottedPlant"}]},
+  {"id": "rug", "fit": [2, 2], "margin": 0.2, "stretch": true, "paint": "carpet", "parts": [{"kit": "furniture", "file": "rugRectangle"}]},
+  {"id": "runner", "fit": [1, 3], "margin": 0.2, "stretch": true, "rot": 90, "paint": "carpet", "parts": [{"kit": "furniture", "file": "rugRectangle"}]},
+  {"id": "stairs", "fit": [1, 3], "margin": 0.1, "stretch": true, "height": 2.4, "rot": 90, "paint": "wood", "parts": [{"kit": "furniture", "file": "stairs"}]},
+  {"id": "bush", "fit": [1, 1], "paint": "grass", "parts": [{"kit": "nature", "file": "plant_bushDetailed"}]},
+  {"id": "flowers", "fit": [1, 1], "paint": "colorRed", "parts": [
+   {"kit": "nature", "file": "flower_redA", "scale": 1.5, "at": [-0.22, 0, -0.18]},
+   {"kit": "nature", "file": "flower_yellowB", "scale": 1.5, "at": [0.2, 0, -0.12]},
+   {"kit": "nature", "file": "flower_purpleC", "scale": 1.5, "at": [0, 0, 0.2]},
+   {"kit": "nature", "file": "flower_redB", "scale": 1.5, "at": [0.25, 0, 0.22]},
+   {"kit": "nature", "file": "flower_yellowA", "scale": 1.5, "at": [-0.25, 0, 0.18]}]}
+ ]
+}

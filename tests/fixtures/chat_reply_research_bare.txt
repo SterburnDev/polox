@@ -1,0 +1,24 @@
+Sure! I couldn't open the assessor's sketch, but the county record and an old listing give a good picture.
+
+```json
+{
+  "address_found": true,
+  "summary": "Two floors, built 1962, about 1,450 sq ft.",
+  "facts": [
+    {"key": "year_built", "value": 1962, "source": "county", "confidence": 0.9},
+    {"key": "floors", "value": 2, "source": "county", "confidence": 0.9}
+  ],
+  "footprint": {"width_m": 10.4, "depth_m": 8.2, "source": "county"},
+  "rooms": [
+    {"kind": "living", "name": "Living room", "floor": 0, "position": "front", "source": "county"},
+    {"kind": "kitchen", "name": "Kitchen", "floor": 0, "position": "back", "source": "county"},
+    {"kind": "bedroom", "name": "Bedroom", "floor": 1, "position": "front", "source": "county"}
+  ],
+  "sources": [
+    {"id": "county", "kind": "assessor", "title": "Testville County Assessor", "url": "https://assessor.example.org/parcel/0001", "said": "Built 1962, 2 floors."}
+  ],
+  "open_questions": []
+}
+```
+
+Hope that helps!

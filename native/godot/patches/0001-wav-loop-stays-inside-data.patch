@@ -1,0 +1,16 @@
+--- a/scene/resources/audio_stream_wav.cpp
++++ b/scene/resources/audio_stream_wav.cpp
+@@ -243,8 +243,11 @@
+ 		len /= 2;
+ 	}
+ 
+-	int64_t loop_begin = base->loop_begin;
+-	int64_t loop_end = base->loop_end;
++	// Polox: keep the loop inside the data. The mixer reads up to and including the loop end, so a loop end at or
++	// past the last frame (scripts usually set it to the frame count) read past the buffer, which crashed Android
++	// in the audio thread. A loop that is already inside the data plays exactly as before.
++	int64_t loop_end = MIN(base->loop_end, int64_t(len) - 1);
++	int64_t loop_begin = CLAMP(base->loop_begin, int64_t(0), MAX(loop_end, int64_t(0)));
+ 	int64_t begin_limit = (base->loop_mode != AudioStreamWAV::LOOP_DISABLED) ? loop_begin : 0;
+ 	int64_t end_limit = (base->loop_mode != AudioStreamWAV::LOOP_DISABLED) ? loop_end : len - 1;
+ 	bool is_stereo = base->stereo;

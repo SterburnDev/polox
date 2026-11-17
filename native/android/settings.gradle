@@ -1,0 +1,21 @@
+// Polox's Godot Android plugin (addons/polox_android/bin/PoloxAndroid.aar), built by tools/export_android.ps1
+// with the Gradle and Android Gradle Plugin of Godot's build template (tools/gradle-home).
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id 'com.android.library' version '8.6.1'
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'PoloxAndroid'

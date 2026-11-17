@@ -1,0 +1,156 @@
+{
+ "creator": "Poly Haven (https://polyhaven.com)",
+ "license": "CC0-1.0",
+ "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+ "required_attribution": "None; credited voluntarily",
+ "made_by": "tools/blender_scripts/prepare_materials.py, Blender 5.2.3: 1K JPGs -> 512 px; ambient occlusion (ARM red) multiplied into the colour; OpenGL normal map kept; average colour and roughness in materials.json",
+ "sources": {
+  "wood": {
+   "asset": "laminate_floor_02",
+   "page": "https://polyhaven.com/a/laminate_floor_02",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/laminate_floor_02/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "planks": {
+   "asset": "wood_planks",
+   "page": "https://polyhaven.com/a/wood_planks",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_planks/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "tile": {
+   "asset": "floor_tiles_06",
+   "page": "https://polyhaven.com/a/floor_tiles_06",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/floor_tiles_06/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "carpet": {
+   "asset": "fabric_pattern_07",
+   "page": "https://polyhaven.com/a/fabric_pattern_07",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_pattern_07/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "concrete": {
+   "asset": "concrete_floor_02",
+   "page": "https://polyhaven.com/a/concrete_floor_02",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_02/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "plaster": {
+   "asset": "painted_plaster_wall",
+   "page": "https://polyhaven.com/a/painted_plaster_wall",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/painted_plaster_wall/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "brick": {
+   "asset": "red_brick_03",
+   "page": "https://polyhaven.com/a/red_brick_03",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/red_brick_03/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "roof": {
+   "asset": "clay_roof_tiles_02",
+   "page": "https://polyhaven.com/a/clay_roof_tiles_02",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/clay_roof_tiles_02/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "asphalt": {
+   "asset": "asphalt_02",
+   "page": "https://polyhaven.com/a/asphalt_02",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "grass": {
+   "asset": "leafy_grass",
+   "page": "https://polyhaven.com/a/leafy_grass",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/ (diff or col_1, nor_gl, arm; 1k jpg; MD5 checked against api.polyhaven.com/files)"
+  },
+  "ceramic": {
+   "asset": "long_white_tiles",
+   "page": "https://polyhaven.com/a/long_white_tiles",
+   "authors": "Sergej Majboroda (photography), Jenelle van Heerden (processing)",
+   "downloads": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/long_white_tiles/ (diff, nor_gl, ao, rough; 1k jpg; downloaded 2026-11-08 with the user's approval)",
+   "made_by": "Polox's Godot image script (2026-11-08): 512 px Lanczos; ambient occlusion multiplied into the colour; OpenGL normal map kept; roughness lowered from the scan's 0.24 to 0.14 for a glazed finish"
+  }
+ },
+ "files": [
+  {
+   "path": "assets/materials/asphalt/albedo.jpg",
+   "sha256": "e53591563cc81fb93eeef64261c49481992bf457837be1d3b3a3cd4e67686aea"
+  },
+  {
+   "path": "assets/materials/asphalt/normal.jpg",
+   "sha256": "c66a9dcf3707b5720f8db4fedcfec786d62cc6b6117de02bd5bb7f54bb092b8e"
+  },
+  {
+   "path": "assets/materials/brick/albedo.jpg",
+   "sha256": "b3dd05b3843a6160b306da64e247568679a853abea0787d44d8ee60a5a7dde4a"
+  },
+  {
+   "path": "assets/materials/brick/normal.jpg",
+   "sha256": "5a94256655ef1f7ccc4bfc781c9a0cbc05de68d5d123017211141dda009b7a19"
+  },
+  {
+   "path": "assets/materials/carpet/albedo.jpg",
+   "sha256": "8fc01ce6aba4e9a6f8e8aabff2c098a48489bdb5ac0ebf4e1be3cdc6e3b2952e"
+  },
+  {
+   "path": "assets/materials/carpet/normal.jpg",
+   "sha256": "7996abeb5f399834deafba051cb3d8af840cc737972aa7dd138f8a2673ee7259"
+  },
+  {
+   "path": "assets/materials/ceramic/albedo.jpg",
+   "sha256": "7d0ef02dac6dfea23b55b36e32f1e0bc7837d2c11f5862916c874dbdb5b282bc"
+  },
+  {
+   "path": "assets/materials/ceramic/normal.jpg",
+   "sha256": "ad75e8e216192b4c3a72bb8f4a0cf0e6acd7abb9f71c9f0f0201a8f63cb72290"
+  },
+  {
+   "path": "assets/materials/concrete/albedo.jpg",
+   "sha256": "a213e287633f62bf5ba8af0bcd00d6b4c671189596d5be4726d9a50759858393"
+  },
+  {
+   "path": "assets/materials/concrete/normal.jpg",
+   "sha256": "71f27a804acb2a39bf32ffa75d2e3dc706ea84e3b5ce07fb7cbe96af5ae8bc5a"
+  },
+  {
+   "path": "assets/materials/grass/albedo.jpg",
+   "sha256": "f0d6341e678fd1d804db2b67c6a98c9bd8fa20b7441310c8e7f9a1b5f4568541"
+  },
+  {
+   "path": "assets/materials/grass/normal.jpg",
+   "sha256": "1461e8a5f494198515672404eae47589b9794d120613fa414c9cd6ad0fc62f31"
+  },
+  {
+   "path": "assets/materials/planks/albedo.jpg",
+   "sha256": "ae16b43e3a5344af4d1478d9c22910bcbe297a0bbb3ca914a7e6e5049a12e963"
+  },
+  {
+   "path": "assets/materials/planks/normal.jpg",
+   "sha256": "06b6b6cfa7b0ca7bc925aadbafc4e112f2e29ab1003e79991c1a5fb13cbad832"
+  },
+  {
+   "path": "assets/materials/plaster/albedo.jpg",
+   "sha256": "904c8d59d47483e63e4297bc3def5407a543e14a43dd12f76f7877dff0ed1404"
+  },
+  {
+   "path": "assets/materials/plaster/normal.jpg",
+   "sha256": "33f817906dd5dfb4ea9ec5b2225d21b6e29f89ff00eeb0a9f5c2d4480620e88e"
+  },
+  {
+   "path": "assets/materials/roof/albedo.jpg",
+   "sha256": "2642058df67607b60ba57316231ad34f878f7f7e2ddb96422fac14fb3d536070"
+  },
+  {
+   "path": "assets/materials/roof/normal.jpg",
+   "sha256": "429aab1395c5ceb515803e4059750d64bc8070b75a059c39dbb5fa8e575cedf3"
+  },
+  {
+   "path": "assets/materials/tile/albedo.jpg",
+   "sha256": "53b937638352fe589b2c4965efc72eab5adae760449df8103515eed1dbca4bfb"
+  },
+  {
+   "path": "assets/materials/tile/normal.jpg",
+   "sha256": "0241ec4035d493ddd31924e25999d779f96ce601a44366d1cdd2aae89c0eba93"
+  },
+  {
+   "path": "assets/materials/wood/albedo.jpg",
+   "sha256": "6113a8f3b1014e02547e9beda790c679dc4555da6f36d990c96ce30efc523e7b"
+  },
+  {
+   "path": "assets/materials/wood/normal.jpg",
+   "sha256": "0d56e4a87852bed2fd151878f7e3640b1026929af10a3d1ebedb2784ed8091bb"
+  }
+ ]
+}

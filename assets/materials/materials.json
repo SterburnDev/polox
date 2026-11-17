@@ -1,0 +1,101 @@
+{
+ "wood": {
+  "source": "laminate_floor_02",
+  "average_linear": [
+   0.3247,
+   0.2145,
+   0.1244
+  ],
+  "roughness": 0.377
+ },
+ "planks": {
+  "source": "wood_planks",
+  "average_linear": [
+   0.1872,
+   0.0971,
+   0.0403
+  ],
+  "roughness": 0.862
+ },
+ "tile": {
+  "source": "floor_tiles_06",
+  "average_linear": [
+   0.1921,
+   0.1595,
+   0.1459
+  ],
+  "roughness": 0.507
+ },
+ "carpet": {
+  "source": "fabric_pattern_07",
+  "average_linear": [
+   0.2999,
+   0.1315,
+   0.1113
+  ],
+  "roughness": 0.64
+ },
+ "concrete": {
+  "source": "concrete_floor_02",
+  "average_linear": [
+   0.1625,
+   0.1364,
+   0.0918
+  ],
+  "roughness": 0.517
+ },
+ "plaster": {
+  "source": "painted_plaster_wall",
+  "average_linear": [
+   0.3895,
+   0.3502,
+   0.3357
+  ],
+  "roughness": 0.919
+ },
+ "brick": {
+  "source": "red_brick_03",
+  "average_linear": [
+   0.1186,
+   0.0731,
+   0.0603
+  ],
+  "roughness": 0.532
+ },
+ "roof": {
+  "source": "clay_roof_tiles_02",
+  "average_linear": [
+   0.2564,
+   0.0711,
+   0.0221
+  ],
+  "roughness": 0.915
+ },
+ "asphalt": {
+  "source": "asphalt_02",
+  "average_linear": [
+   0.0777,
+   0.0765,
+   0.0679
+  ],
+  "roughness": 0.77
+ },
+ "grass": {
+  "source": "leafy_grass",
+  "average_linear": [
+   0.2356,
+   0.1734,
+   0.0771
+  ],
+  "roughness": 0.685
+ },
+ "ceramic": {
+  "source": "long_white_tiles",
+  "average_linear": [
+   0.5594,
+   0.5266,
+   0.45
+  ],
+  "roughness": 0.14
+ }
+}

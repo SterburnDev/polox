@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gradle merges this into the game's manifest. The meta-data line is how Godot finds the plugin. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <meta-data
+            android:name="org.godotengine.plugin.v2.PoloxAndroid"
+            android:value="org.polox.android.PoloxAndroidPlugin" />
+
+        <!-- Shows the notifications PoloxAndroid.schedule sets, even with the game closed. Not exported:
+             only this app's own alarms reach it. -->
+        <receiver
+            android:name="org.polox.android.MissYouReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

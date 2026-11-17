@@ -1,0 +1,15 @@
+{
+ "creator": "Poly Haven (https://polyhaven.com)",
+ "license": "CC0-1.0",
+ "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+ "asset": "kloofendal_48d_partly_cloudy_puresky",
+ "page": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky",
+ "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr (MD5 checked)",
+ "made_by": "tools/blender_scripts/prepare_sky.py, Blender 5.2.3: 2K -> 1024x512 Radiance HDR",
+ "files": [
+  {
+   "path": "assets/sky/partly_cloudy.hdr",
+   "sha256": "66fcf5f378de516ee10c917bb3ae68f47f9e01a3ec385b920d8c821abc69ea30"
+  }
+ ]
+}

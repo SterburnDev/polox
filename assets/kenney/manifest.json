@@ -1,0 +1,341 @@
+{
+ "schema_version": 1,
+ "source_archive_location": "build/update9/kenney_sources (ignored; excluded from exports)",
+ "integration": {
+  "models": "scripts/world/licensed_props.gd via Furniture.build: bench, tree, streetlamp (original files) and 30 catalogue pieces from assets/models/furniture (BAKED)",
+  "audio": "scripts/core/synth.gd: wood, stone and grass footsteps; user sound overrides take precedence",
+  "emotes": "scripts/characters/actor.gd emote(): eight symbols shown as pixel balloons"
+ },
+ "packs": [
+  {
+   "archive_sha256": "5869c35cf30b1c87bdb2d197b6d325eebadd2ef08ea27f04797e8e08d77a9a39",
+   "version": "2.0",
+   "license": "CC0-1.0",
+   "pack": "city-kit-suburban",
+   "download_url": "https://kenney.nl/media/pages/assets/city-kit-suburban/2c871b7af2-1745479373/kenney_city-kit-suburban_20.zip",
+   "changes": "Original bytes retained. Models centered and uniformly scaled at runtime to existing footprints; optional player paint applied at runtime. Audio uses existing volume controls.",
+   "files": [
+    {
+     "path": "assets/kenney/suburban/License.txt",
+     "sha256": "d778fa769a89a7d9f167bc337fdf8fc2144e47d9abb0c35eb6ad897c0ee24d0a"
+    },
+    {
+     "path": "assets/kenney/suburban/tree-small.glb",
+     "sha256": "5f63359e5f392609d7617cc98070855ca1ffd4f4b4bc3978a5ff56ece88a58d6"
+    },
+    {
+     "path": "assets/kenney/suburban/Textures/colormap.png",
+     "sha256": "9b5de86078c25ef02351a80d35ff3c978693a1044565b73eedd9ae9b5b80665d"
+    }
+   ],
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "required_attribution": "None; creator credited voluntarily",
+   "creator": "Kenney",
+   "source_url": "https://kenney.nl/assets/city-kit-suburban"
+  },
+  {
+   "archive_sha256": "374a4552115cbd11b4ec5c930ee31a533562dc78a09af249a655d03f7ea3b959",
+   "version": "2.2",
+   "license": "CC0-1.0",
+   "pack": "city-kit-roads",
+   "download_url": "https://kenney.nl/media/pages/assets/city-kit-roads/74288c9459-1791628607/kenney_city-kit-roads.zip",
+   "changes": "Original bytes retained. Models centered and uniformly scaled at runtime to existing footprints; optional player paint applied at runtime. Audio uses existing volume controls.",
+   "files": [
+    {
+     "path": "assets/kenney/roads/License.txt",
+     "sha256": "d23f51360ca2cd81711bc5b09ddfb28ac94da96d7ca2dbdef12c50f33f35c353"
+    },
+    {
+     "path": "assets/kenney/roads/light-square.glb",
+     "sha256": "6230d136c8883d7f9bc1b86f0309077e452e26e5e1e587ef1b77abef3c5f047c"
+    },
+    {
+     "path": "assets/kenney/roads/Textures/colormap.png",
+     "sha256": "a48e2962661ae44368ffddf3054f80ed8491d082b757dcc3011184cd9a98b185"
+    }
+   ],
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "required_attribution": "None; creator credited voluntarily",
+   "creator": "Kenney",
+   "source_url": "https://kenney.nl/assets/city-kit-roads"
+  },
+  {
+   "archive_sha256": "e67652d0932cee41683f74711c03d3e192a2af9979ef8e6b237711f5482d46b0",
+   "version": "2.0",
+   "license": "CC0-1.0",
+   "pack": "furniture-kit",
+   "download_url": "https://kenney.nl/media/pages/assets/furniture-kit/440e0608a4-1677580847/kenney_furniture-kit.zip",
+   "changes": "Original bytes retained. Models centered and uniformly scaled at runtime to existing footprints; optional player paint applied at runtime. Audio uses existing volume controls.",
+   "files": [
+    {
+     "path": "assets/kenney/furniture/bench.glb",
+     "sha256": "ba05a6d23a5a5a44da016757632070e47ff7587ce10e2f6d6d52328b4cf5489b"
+    },
+    {
+     "path": "assets/kenney/furniture/License.txt",
+     "sha256": "bc0de1a0742cb490f9ed4bae0bd284286ebb27e23149b9917c7d8c0d590b8b29"
+    }
+   ],
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "required_attribution": "None; creator credited voluntarily",
+   "creator": "Kenney",
+   "source_url": "https://kenney.nl/assets/furniture-kit"
+  },
+  {
+   "archive_sha256": "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+   "version": "1.0",
+   "license": "CC0-1.0",
+   "pack": "impact-sounds",
+   "download_url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+   "changes": "Original bytes retained. Models centered and uniformly scaled at runtime to existing footprints; optional player paint applied at runtime. Audio uses existing volume controls.",
+   "files": [
+    {
+     "path": "assets/kenney/impact/footstep_concrete_000.ogg",
+     "sha256": "d7267e183067757c92c169de2a379abea592cfca6b39bb2e8feea15221ad79fe"
+    },
+    {
+     "path": "assets/kenney/impact/footstep_grass_000.ogg",
+     "sha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f"
+    },
+    {
+     "path": "assets/kenney/impact/footstep_wood_000.ogg",
+     "sha256": "5f1c252942a220d658121bd9417448cd19649ded9fff2ff15f6e50899373ce8e"
+    },
+    {
+     "path": "assets/kenney/impact/License.txt",
+     "sha256": "b49aa9c56b04528b95913de13e506a0f7c5e807b9925db9bfef86af1f91120db"
+    }
+   ],
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "required_attribution": "None; creator credited voluntarily",
+   "creator": "Kenney",
+   "source_url": "https://kenney.nl/assets/impact-sounds"
+  },
+  {
+   "pack": "tiny-town",
+   "version": "1.1",
+   "license": "CC0-1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "creator": "Kenney",
+   "required_attribution": "None; creator credited voluntarily",
+   "source_url": "https://kenney.nl/assets/tiny-town",
+   "download_url": "https://kenney.nl/media/pages/assets/tiny-town/a415fbeb49-1735736916/kenney_tiny-town.zip",
+   "archive_sha256": "9768692dccff1d706408a5aedd6ca4f6cd1409506cbc84cb2f862919764be977",
+   "changes": "Original bytes retained (Tilemap/tilemap_packed.png). scripts/world/tileset_factory.gd cuts 24 tiles from it at run time, doubles them to 32 px (nearest) and names them: the built-in \"Tiny Town\" tile set.",
+   "files": [
+    {
+     "path": "assets/kenney/tiny_town/License.txt",
+     "sha256": "c483c167cc3bdfe17c15f957ff847d409f64d81b410b28783636cf3b2b7814c5"
+    },
+    {
+     "path": "assets/kenney/tiny_town/tilemap_packed.png",
+     "sha256": "3a54d99ecde790d4fdea207a3644cf130fc56fa838f1beb1507c185a95b8e902"
+    }
+   ]
+  },
+  {
+   "pack": "emotes-pack",
+   "version": "not stated in the pack",
+   "license": "CC0-1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "creator": "Kenney",
+   "required_attribution": "None; creator credited voluntarily",
+   "source_url": "https://kenney.nl/assets/emotes-pack",
+   "download_url": "https://kenney.nl/media/pages/assets/emotes-pack/d00a3dcb06-1677578798/kenney_emotes-pack.zip",
+   "archive_sha256": "96ab3f2c92d7acd860942efca1c9f1295184b11d3db5c79c28da82036e496526",
+   "changes": "Original bytes retained (PNG/Pixel/Style 1). Shown as billboards above friends by scripts/characters/actor.gd.",
+   "files": [
+    {
+     "path": "assets/kenney/emotes/License.txt",
+     "sha256": "b57743037569a9f7b0c8ff3793a1dd7be5bbf42b14ccb382848539c5c67cb72a"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_exclamation.png",
+     "sha256": "5111d386466a77bc39ee02c5e1ece2d19109f9635462117dd189b5337a98e26b"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_heart.png",
+     "sha256": "fa100fa21f82b995872d85b14d6ff691c856c967e09c425a4de6a5b44af0165b"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_music.png",
+     "sha256": "6861608c3d3118e84e833f4e5a92385cce0f4d7676a2d5d5cdb5cb4b9d3ad51d"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_question.png",
+     "sha256": "7097f3f54d02d3914705bb3e9e1dea65bf185f29ad70d6fd2b7031bcef02938d"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_sleep.png",
+     "sha256": "1b20f7050c6e8fc8cc19354e27177720454b7ee79869f05afca9c5416c3e3627"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_star.png",
+     "sha256": "af4cefd3ffa0803d12e71887d25eb19965ce0913e87aefd31c79800475e859b6"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_stars.png",
+     "sha256": "2c0faef8242db3cbe4405ae361765309c35d4ae8ff4350b7536fc354a5c49077"
+    },
+    {
+     "path": "assets/kenney/emotes/emote_swirl.png",
+     "sha256": "93c50df281d31e5fe521fedb01983d25ba73a0584f10aa9907c9d351d9e3ba75"
+    }
+   ]
+  },
+  {
+   "pack": "nature-kit",
+   "version": "2.1",
+   "license": "CC0-1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "creator": "Kenney",
+   "required_attribution": "None; creator credited voluntarily",
+   "source_url": "https://kenney.nl/assets/nature-kit",
+   "download_url": "https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip",
+   "archive_sha256": "fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d",
+   "changes": "Used only through the derived furniture models below (bush, flowers).",
+   "files": [
+    {
+     "path": "assets/models/furniture/License_nature-kit.txt",
+     "sha256": "cb96b75e3560ac78d7a53ce6f083f4cdb5c53faea6141b62d63458dcfe1e4b9d"
+    }
+   ]
+  }
+ ],
+ "derived_models": {
+  "folder": "assets/models/furniture",
+  "made_by": "tools/blender_scripts/build_furniture.py with tools/blender_scripts/furniture_spec.json, Blender 5.2.3",
+  "from": "furniture-kit 2.0 (archive e67652d0...) and nature-kit (archive fa7974a0...)",
+  "changes": "Parts joined into one mesh per model with one slot per material; scaled to metres (x2, flowers x1.5); turned to face +z; composites placed (desk with screen, keyboard and mouse; television on its cabinet; books on the bookcase shelves; a lamp on the nightstand; five flowers); fitted to the catalogue footprint (only smaller, or stretched for rugs, runner and stairs); origin on the floor under the centre; the paintable material renamed \"paint\"; lamp shades made emissive.",
+  "files": [
+   {
+    "path": "assets/models/furniture/License_furniture-kit.txt",
+    "sha256": "bc0de1a0742cb490f9ed4bae0bd284286ebb27e23149b9917c7d8c0d590b8b29"
+   },
+   {
+    "path": "assets/models/furniture/License_nature-kit.txt",
+    "sha256": "cb96b75e3560ac78d7a53ce6f083f4cdb5c53faea6141b62d63458dcfe1e4b9d"
+   },
+   {
+    "path": "assets/models/furniture/armchair.glb",
+    "sha256": "3ea109e608f6b7446efba01d9836230fc6e8bc7589d9923f60400217e34cfed0"
+   },
+   {
+    "path": "assets/models/furniture/bathtub.glb",
+    "sha256": "d8ed2f4356c52c26ec5d786eb4caffcfe6e42d2f538ed8a1969e2b01556427d1"
+   },
+   {
+    "path": "assets/models/furniture/bed.glb",
+    "sha256": "77f1ce24cf5c08cb6a2ddef6183c8ef177a05eee2803aa9a042f48faad343e5a"
+   },
+   {
+    "path": "assets/models/furniture/bookshelf.glb",
+    "sha256": "1c7b8912b9a140e3c8402631f4ae216d0191a7e6982561b51b5f47a8f74faadf"
+   },
+   {
+    "path": "assets/models/furniture/bush.glb",
+    "sha256": "4c06c870af59447ca32008318a6d899aaa91cf677c759adda91b460db439bd74"
+   },
+   {
+    "path": "assets/models/furniture/chair.glb",
+    "sha256": "7f91e6c3a61e06258e8f7e3b86cb08ac1cb0c0b9027d62c678cfcec0da6d1e1d"
+   },
+   {
+    "path": "assets/models/furniture/coffee_table.glb",
+    "sha256": "e4a9be647831ba5774f9166da1ee8b1aaa260285dc2183631f9c141e28d365ab"
+   },
+   {
+    "path": "assets/models/furniture/computer.glb",
+    "sha256": "7bd602a1a2071f1a7e48d8e1414269382dc7544c9d81572923bb6f3d73fcca2a"
+   },
+   {
+    "path": "assets/models/furniture/counter.glb",
+    "sha256": "e9af32da39a8fe74c89cb606e2a4d431985f0f50a14b4bc9bd5cac6901b01c60"
+   },
+   {
+    "path": "assets/models/furniture/desk.glb",
+    "sha256": "bf0b7e70a0892f2b0fcfe908112ba1e45d3f1387fd53a125fa426f3e6170fd3d"
+   },
+   {
+    "path": "assets/models/furniture/dining_table.glb",
+    "sha256": "5e561a04ad7f2b16f701ffb0ba036b46620d0e38b261bb0ced7fcfd3c4ff0160"
+   },
+   {
+    "path": "assets/models/furniture/double_bed.glb",
+    "sha256": "b84bf5d43656211f46354546b64bf57380bae337e98a42a3ddc55f91d11c43f5"
+   },
+   {
+    "path": "assets/models/furniture/dresser.glb",
+    "sha256": "9a31d069b5b1686cf078c5be395573b7cd5ccff1be658d42404b50fb21874350"
+   },
+   {
+    "path": "assets/models/furniture/flowers.glb",
+    "sha256": "f8b543bea8b94a9239c310be5a68544b4dd4a276717e3dad81fe43fc093cb09b"
+   },
+   {
+    "path": "assets/models/furniture/fridge.glb",
+    "sha256": "d9b0a11974d92bae85956edc50d707bc5954200b9d87890efa446359324ceee1"
+   },
+   {
+    "path": "assets/models/furniture/lamp.glb",
+    "sha256": "547fae88b70a2c3b6fba00f375651a4dc79e753f8bac9a1c7d9618bfd3bff5a3"
+   },
+   {
+    "path": "assets/models/furniture/nightstand.glb",
+    "sha256": "66d52a3523e8ded077e341a1f4bf8cde0d7b759d37fbb4a04f39bf58a8c547ae"
+   },
+   {
+    "path": "assets/models/furniture/plant.glb",
+    "sha256": "af0113a5c256bdb1636118f9a0b9466796880dc4a083e055b55b894e801c46cf"
+   },
+   {
+    "path": "assets/models/furniture/rug.glb",
+    "sha256": "b69a91b794bb6b357d2f30062a83ccab95593059b9a10f4631d2e9ac2489c9a1"
+   },
+   {
+    "path": "assets/models/furniture/runner.glb",
+    "sha256": "764c45dc6016e275c84bcdecf3680d84a993fc880787afe07617327de8d05eae"
+   },
+   {
+    "path": "assets/models/furniture/shower.glb",
+    "sha256": "60bb3e3d0d7cc18eb15989c4989f621e499f0c6dd4297a87b302a9f712781c17"
+   },
+   {
+    "path": "assets/models/furniture/sink.glb",
+    "sha256": "b14146b6890c3208955d2035b87d8efaa92007247a9687e951de9bf0ecb1c318"
+   },
+   {
+    "path": "assets/models/furniture/sofa.glb",
+    "sha256": "0c95fb260c39814d42a022d087e08731a04b77e7797d6d469781837951fac59c"
+   },
+   {
+    "path": "assets/models/furniture/stairs.glb",
+    "sha256": "bdfcfdaabe72507d7109fce33dbd0a493215ec30d53fdf1b22cb14277dd6e9cd"
+   },
+   {
+    "path": "assets/models/furniture/stove.glb",
+    "sha256": "1b187d96301c6fdbab71701f2f91b67d519eb01219ad32a2a9add3467a7279b1"
+   },
+   {
+    "path": "assets/models/furniture/toilet.glb",
+    "sha256": "aaf80d4d0a35b449b398cb4c5fe876504ecf84f696753137e41217320c75bb98"
+   },
+   {
+    "path": "assets/models/furniture/tv.glb",
+    "sha256": "eea36fdc1a82f24c03e8f75b7b843446852948437f950f89c93e533e337a4460"
+   },
+   {
+    "path": "assets/models/furniture/wardrobe.glb",
+    "sha256": "9e08702106518b01d71ed68969ce9d27002e7c8a861a741b7c1e89db9e8ab293"
+   },
+   {
+    "path": "assets/models/furniture/washbasin.glb",
+    "sha256": "f8a13bb062d70e24530a53a1cf538434650ea94cf6a7747e6b25e0c21a24ad86"
+   },
+   {
+    "path": "assets/models/furniture/washer.glb",
+    "sha256": "690ada856e64c84966c6ce1d427d0544eecc6f0958703973bb78c9747cd6b93d"
+   }
+  ]
+ }
+}

@@ -1,0 +1,15 @@
+--- a/platform/android/java/app/build.gradle
++++ b/platform/android/java/app/build.gradle
+@@ -115,6 +115,12 @@
+ 
+     assetPacks = [":assetPackInstallTime"]
+ 
++    // Polox: keep Godot's own formats uncompressed, as Godot's non-Gradle export does
++    // (EditorExportPlatformAndroid::_should_compress_asset): Android then reads them straight from the APK.
++    androidResources {
++        noCompress.addAll(['.webp', '.cfb', '.scn', '.ctex', '.pck'])
++    }
++
+     namespace = 'com.godot.game'
+ 
+     defaultConfig {
