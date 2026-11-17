@@ -69,6 +69,7 @@ func _page_world() -> Control:
 	_player_name = UiKit.line_edit("What should friends call you?")
 	_player_name.text_submitted.connect(func(_t): _show(1))
 	p.add_child(UiKit.field_row("Your name", _player_name, 200))
+	p.add_child(UiKit.para("Everything you share is optional and stays on this device. Nothing leaves it unless you connect something yourself: cloud sync (like Google Drive) or an online AI in Settings.", 18, ThemeBuilder.MUTED))
 	p.add_child(_nav([["Back", func(): cancelled.emit()], ["Next", func(): _show(1)]]))
 	return p
 
@@ -76,7 +77,7 @@ func _page_world() -> Control:
 func _page_life() -> Control:
 	var p := UiKit.vbox(12)
 	p.add_child(_title("A little about you (optional)"))
-	p.add_child(UiKit.para("Your friends read this, so they can ask about your real day. Share only what you like; it stays on this PC.", 20, ThemeBuilder.MUTED))
+	p.add_child(UiKit.para("Your friends read this, so they can ask about your real day. Share only what you like.", 20, ThemeBuilder.MUTED))
 	_life = UiKit.text_edit("e.g. I'm a student and work weekends at a bakery. Lately I've been stressed about exams. I have a cat named Pudding.", "", 110)
 	p.add_child(_life)
 	_dream = UiKit.line_edit("One dream you'd love to chase, e.g. learn guitar, see the ocean")

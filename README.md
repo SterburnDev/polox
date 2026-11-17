@@ -11,6 +11,19 @@ stored on your own devices: there are no accounts and no telemetry.
 
 ![A made-up world: an outdoor place, a friend, the day's card](docs/images/world.png)
 
+## Privacy
+
+- **Personal information is optional.** Your name, pronouns, birthday, "about me", dreams and your real
+  home can all be left blank or skipped, and changed or deleted later.
+- **Everything stays on your device.** Worlds, chats, drawings, settings and API keys live in one folder
+  on your PC or phone. There are no accounts, no Polox servers, no telemetry, analytics or ads.
+- **Nothing leaves unless you connect it yourself:** cloud folder sync (Google Drive, OneDrive,
+  Dropbox...), an online AI with your own key, the OpenStreetMap lookup when you map your streets, or
+  Phone Link between your own devices. Each is off until you turn it on.
+
+What each of those sends, and to whom: [PRIVACY.md](PRIVACY.md). Security design and how to report a
+problem: [SECURITY.md](SECURITY.md).
+
 ## Play
 
 | You have | Do this |
@@ -32,17 +45,70 @@ The full manual, from controls to troubleshooting, is [docs/PLAYER_GUIDE.md](doc
 Local play never needs any of them. What is sent, how conflicts are handled and how to set each one up:
 [docs/SYNC.md](docs/SYNC.md).
 
-## Build and test
+## Build it yourself
+
+Everything runs on Windows 10 or 11 (64-bit) from a plain clone. Every tool goes into `tools\` inside
+the project and is checked by hash; nothing is installed system-wide. You need
+[Git](https://git-scm.com/) and, from step 3 on, [Python 3.11 or newer](https://www.python.org/).
+
+**1. Get the code and the editor** (about 86 MB, checked against its SHA-512):
 
 ```bat
-tools\get_godot.bat                 rem once: the Godot 4.7.2 editor (about 86 MB, checked against its SHA-512)
-run.bat                             rem play from source
-check.bat                           rem import, parse-check every script, the test suite, a smoke run
-check.bat test_secret               rem one suite
+git clone https://github.com/SterburnDev/polox.git
+cd polox
+tools\get_godot.bat
 ```
 
-Exports (Windows, the setup program, the phone version, the Android app), the engine build they use and
-the release checks are in [docs/BUILDING.md](docs/BUILDING.md).
+**2. Play and test from source.** No build needed:
+
+```bat
+run.bat                 rem play (your data goes to PersonalData\, which Git ignores)
+check.bat               rem import, parse-check every script, all ~770 tests, a smoke run: ends with ALL GOOD (about 45 minutes)
+check.bat test_secret   rem a single test suite
+```
+
+**3. Build Polox's engine** (once, and again only when `native\godot\` changes). Exports use Polox's own
+build of the official Godot 4.7.2 source with the fixes in `native\godot\patches\`, not Godot's
+ready-made templates. Put these in `tools\` first:
+
+| Folder | What | Where from |
+| --- | --- | --- |
+| `tools\pyenv\` | SCons 4.11.1 | `python -m venv tools\pyenv` then `tools\pyenv\Scripts\python -m pip install --require-hashes -r native\godot\build-requirements.txt` |
+| `tools\downloads\godot-4.7.2-stable.tar.xz` | Godot's source (checked against `tools\godot\SHA512-SUMS.txt`) | [Godot 4.7.2 release](https://github.com/godotengine/godot/releases/tag/4.7.2-stable) |
+| `tools\llvm-mingw\` (Windows build) | LLVM-MinGW, the `ucrt-x86_64` zip, unpacked so `tools\llvm-mingw\bin\clang.exe` exists | [llvm-mingw releases](https://github.com/mstorsjo/llvm-mingw/releases) |
+| `tools\emsdk\` (phone browser build) | Emscripten 4.0.11: unpack the emsdk `4.0.11` source zip, then `tools\emsdk\emsdk.bat install 4.0.11` and `tools\emsdk\emsdk.bat activate 4.0.11` | [emsdk 4.0.11](https://github.com/emscripten-core/emsdk/releases/tag/4.0.11) |
+| `tools\jdk17\`, `tools\android-sdk\` (Android build) | Java 17, NDK 29, platform 36, build-tools 36.1.0 | `powershell -ExecutionPolicy Bypass -File tools\get_android_tools.ps1 -AcceptLicenses` |
+
+```bat
+tools\pyenv\Scripts\python tools\build_engine.py windows web android
+```
+
+Leave out the platforms you don't need. Results land in `tools\engine\<platform>\`.
+
+**4. Build the downloads:**
+
+```bat
+rem The Windows game: build\release\public\windows\Polox.exe (the game in one file, checked)
+python tools\release\build_windows.py --flavor public --out build\release\public\windows
+
+rem The setup program and the portable zip (needs Inno Setup 7, see docs\BUILDING.md section 5):
+rem Polox-<version>-Setup.exe, Polox-<version>-Windows-Portable.zip, Polox-<version>-SHA256.txt
+python tools\release\build_installer.py --source build\release\public\windows --out build\release\public
+
+rem The Android app: build\android\polox.apk (arm64)
+powershell -ExecutionPolicy Bypass -File tools\export_android.ps1 -NoPause
+
+rem Check what is inside the APK
+python tools\release\verify_pack.py --flavor public --apk build\android\polox.apk
+```
+
+The first Android build makes your own signing key in `tools\android\`. Keep that folder safe and never
+commit it (Git ignores it): Android only updates an installed app with an APK signed by the same key.
+The setup program and `Polox.exe` are unsigned unless you pass your own `--sign` command.
+
+Every step, the phone (browser) version, code signing and the release checks are described in
+[docs/BUILDING.md](docs/BUILDING.md); the public and private build flavours in
+[docs/RELEASES.md](docs/RELEASES.md).
 
 ## Where things are
 

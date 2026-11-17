@@ -42,13 +42,22 @@ Exports don't use Godot's ready-made templates. They use Polox's own build of th
 source, with the fixes in `native\godot\patches\` and without the engine modules the game doesn't need
 (`native\godot\polox_profile.py`). Build it once, and again when a patch or the profile changes:
 
+It expects these portable toolchains in `tools\` (each only for the platforms you build):
+
+| Folder | What | How to get it |
+| --- | --- | --- |
+| `tools\pyenv\` | SCons 4.11.1 in a Python 3.11+ virtual environment | `python -m venv tools\pyenv`, then `tools\pyenv\Scripts\python -m pip install --require-hashes -r native\godot\build-requirements.txt` |
+| `tools\downloads\godot-4.7.2-stable.tar.xz` | Godot's official source | From <https://github.com/godotengine/godot/releases/tag/4.7.2-stable>; `build_engine.py` checks it against `tools\godot\SHA512-SUMS.txt` |
+| `tools\llvm-mingw\` | LLVM-MinGW (Windows) | The `llvm-mingw-<date>-ucrt-x86_64.zip` from <https://github.com/mstorsjo/llvm-mingw/releases>, unpacked so `tools\llvm-mingw\bin\clang.exe` exists |
+| `tools\emsdk\` | Emscripten 4.0.11 (web) | Unpack the source zip of emsdk tag `4.0.11` (<https://github.com/emscripten-core/emsdk/archive/refs/tags/4.0.11.zip>) into `tools\emsdk\`, then `tools\emsdk\emsdk.bat install 4.0.11` and `tools\emsdk\emsdk.bat activate 4.0.11` |
+| `tools\jdk17\`, `tools\android-sdk\` | Java 17, NDK 29.0.14206865, platform 36, build-tools 36.1.0 (Android) | `powershell -ExecutionPolicy Bypass -File tools\get_android_tools.ps1 -AcceptLicenses` (every download is checked by SHA-256) |
+
 ```bat
-tools\get_android_tools.ps1 -AcceptLicenses      rem once, only for Android: JDK 17, SDK, NDK
 tools\pyenv\Scripts\python tools\build_engine.py windows web android
 ```
 
-The top of `tools\build_engine.py` lists the portable toolchains it expects in `tools\` (SCons in a
-Python virtual environment, Emscripten 4.0.11, LLVM-MinGW, the Android NDK) and how each is checked.
+A missing toolchain stops the build with its folder named. The first Android build also lets Gradle
+download its own libraries into `tools\gradle-home\`.
 Results land in `tools\engine\<platform>\`; `tools\engine\build_info.json` records the source hash, the
 patches and the hash of every file made. `tests\test_engine_profile.gd` fails if the game starts needing
 an engine class the profile leaves out.

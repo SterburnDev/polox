@@ -326,7 +326,7 @@ func _sources_tab() -> void:
 		for f in facts:
 			var conf := float(f.get("confidence", 0.5))
 			box.add_child(UiKit.para("• %s: %s%s" % [ResearchPrompt.fact_name(f.key), ResearchPrompt.fact_value(f.key, f.value), "  (a guess)" if conf < 0.5 else ("  (fairly sure)" if conf < 0.8 else "")], 16, ThemeBuilder.MUTED))
-		if str(s.get("url", "")) != "":
+		if _web_url(str(s.get("url", ""))):   # (research and synced files are data: only web pages open)
 			var url := str(s.url)
 			var link := UiKit.button("Open the page", func(): OS.shell_open(url), 0)
 			box.add_child(link)
@@ -489,7 +489,7 @@ func _save_tab() -> void:
 		v.add_child(UiKit.label(str(b.what), 18, ThemeBuilder.YELLOW))
 		if str(b.get("why", "")) != "":
 			v.add_child(UiKit.para(str(b.why), 16, ThemeBuilder.MUTED))
-		if url != "":
+		if _web_url(url):
 			v.add_child(UiKit.button("Open the page", func(): OS.shell_open(url), 0))
 	var open_dir := UiKit.button("Open my_home files", func(): SaveManager.open_folder(HomeStore.files_dir()), 0)   # (on a phone: says to use the PC)
 	open_dir.name = "OpenFiles"
@@ -755,3 +755,9 @@ func forget() -> void:
 	if in_light and world:
 		await world.dark.go_dark()
 	GameState.notify("Forgotten, every bit.")
+
+
+## Only http(s) pages open from research or synced home files (never a file, program or other link kind).
+static func _web_url(url: String) -> bool:
+	var u := url.strip_edges().to_lower()
+	return u.begins_with("https://") or u.begins_with("http://")

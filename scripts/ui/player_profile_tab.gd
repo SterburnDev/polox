@@ -26,7 +26,7 @@ func build() -> void:
 	var v := UiKit.vbox(8)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(v)
-	v.add_child(UiKit.para("Everything here is shared with your friends' AI so they know who you are. Leave anything blank you'd rather keep to yourself.", 18, ThemeBuilder.MUTED))
+	v.add_child(UiKit.para("All of this is optional: leave anything blank you'd rather keep to yourself. Your friends' AI reads it so they know who you are. It stays on this device unless you use an online AI or cloud sync (like Google Drive).", 18, ThemeBuilder.MUTED))
 	name_edit = _line(v, "Name", "What should friends call you?", "name")
 	name_edit.max_length = 40
 	_line(v, "Pronouns", "optional, e.g. she/her, he/him, they/them", "pronouns")

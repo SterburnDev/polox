@@ -390,10 +390,14 @@ To move to a new PC, copy this whole folder over, or export a world as a `.polox
 
 ## 6. Privacy
 
-Everything stays on this PC. There are **no accounts, no cloud servers, no telemetry and no multiplayer**.
-The network traffic is the chat requests sent to the AI provider **you** choose in Settings, plus, only
-while you switch it on, **Phone Link**: a small web server on this PC that your paired phones talk to over
-your own network (details below).
+**Everything about you is optional** (name, pronouns, birthday, about me, dreams, your real home): leave
+any of it blank or skip it. **Everything stays on your device.** There are **no accounts, no Polox servers,
+no telemetry and no multiplayer**. Something leaves your device only through what **you** switch on: the
+chat requests sent to the online AI provider you choose in Settings, **cloud folder sync** (Polox writes
+the worlds you pick into a folder your own Google Drive, OneDrive or Dropbox app uploads; never settings,
+keys or your real home, see [SYNC.md](SYNC.md)), **Map my streets** (coordinates to OpenStreetMap, after
+asking), and **Phone Link**: a small web server on this PC that your paired phones talk to over your own
+network (details below). The full list is in [PRIVACY.md](../PRIVACY.md).
 Each request carries what a friend needs to answer you: the World Bible, that friend's card and memories,
 your **Player Profile** (name, pronouns, nicknames, about me, how you look and what you wear), your dreams
 (unless you turn that off in My character) and the recent chat. Leave any profile field blank to keep it out.

@@ -31,7 +31,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GODOT = PROJECT_ROOT / "tools" / "godot" / "Godot_v4.7.2-stable_win64_console.exe"
 SCRIPT = PROJECT_ROOT / "tools" / "release" / "installer" / "polox.iss"
-NOTICE_FILES = ("LICENSE", "THIRD_PARTY_NOTICES.md")
+NOTICE_FILES = ("LICENSE", "THIRD_PARTY_NOTICES.md", "PRIVACY.md")
 ISCC_CANDIDATES = (
     PROJECT_ROOT / "tools" / "innosetup" / "ISCC.exe",
     Path(r"C:\Program Files\Inno Setup 7\ISCC.exe"),
