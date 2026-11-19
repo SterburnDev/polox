@@ -1,0 +1,22 @@
+{
+	"version": 1,
+	"ai": {
+		"preset": "mock",
+		"base_url": "",
+		"model": "",
+		"api_key": "",
+		"temperature": 0.85,
+		"max_tokens": 400,
+		"timeout_s": 20,
+		"requests_per_minute": 20,
+		"npc_chatter": true
+	},
+	"ui_scale": 1.0,
+	"text_speed": 45,
+	"camera_preset": "cozy",
+	"wheel_mode": "zoom",
+	"music_volume": 0.7,
+	"sfx_volume": 0.8,
+	"text_blips": true,
+	"onboarded": false
+}

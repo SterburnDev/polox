@@ -1,0 +1,76 @@
+# Godot cache (rebuilt automatically by run.bat / check.bat)
+.godot/
+*.import.tmp
+
+# Portable engine binaries are downloaded, not committed (see tools/get_godot.ps1)
+tools/godot/*.exe
+tools/godot/*.zip
+tools/godot/*.app
+tools/godot/Godot*
+!tools/godot/README.md
+tools/godot/_sc_
+tools/godot/editor_data/
+
+# Plan B web server (downloaded by tools/fetch_server.bat, not committed)
+tools/server/
+
+# Personal settings may contain an API key: never commit them
+settings.json
+*.local.json
+
+# Test scratch saves
+tests/.tmp_save/
+
+# Export templates (downloaded) and exported builds
+tools/godot/templates/
+build/
+build_id.txt
+
+# OS & Python bytecode noise
+Thumbs.db
+.DS_Store
+desktop.ini
+__pycache__/
+*.py[cod]
+
+# Android toolchain and signing (downloaded/created by tools/get_android_tools.ps1; never committed)
+tools/jdk17/
+tools/android-sdk/
+tools/android-home/
+tools/downloads/
+tools/android/
+*.keystore
+*.jks
+tools/blender/
+
+# Polox's own engine (tools/build_engine.py): Godot's source, the toolchains and the built templates
+tools/godot-src/
+tools/pyenv/
+tools/emsdk/
+tools/gradle-home/
+tools/llvm-mingw/
+tools/engine/
+# Godot's Gradle build project, installed from tools/engine/android/android_source.zip by every export
+/android/
+# Polox's Android plugin: Gradle's work folders and the AAR (built by tools/export_android.ps1)
+native/android/build/
+native/android/.gradle/
+addons/polox_android/bin/
+
+# Private data on this PC and locally supplied music
+/.polox-local/
+/assets/music/
+
+# Add-ons on this PC (local-addons/: songs, pictures and themes that aren't ours to share; docs/ADDONS.md)
+/local-addons/
+# Built in on this PC only (assets/local/: the soundtrack and the Soul; a copy without it uses Polox Originals)
+/assets/local/
+# The optional Detailed pack (CC0, ~130 MB): tools/get_detail_pack.py fetches it (docs/ASSET_CREDITS.md)
+/assets/detail/
+# [PERSONAL_DATA] Your saves, settings, keys and logs (scripts/core/personal_data.gd). Never committed or exported.
+/PersonalData/
+/PersonalData.migrating/
+
+# Release tools fetched on this PC (docs/BUILDING.md): the Inno Setup compiler and gitleaks
+tools/innosetup/
+tools/gitleaks/

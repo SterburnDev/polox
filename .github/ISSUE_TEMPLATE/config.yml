@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Player Guide & Troubleshooting
+    url: https://github.com/SterburnDev/polox/blob/main/docs/PLAYER_GUIDE.md
+    about: Controls, Dream Gates, Phone Link, Add-ons, and common fixes
+  - name: Security Policy
+    url: https://github.com/SterburnDev/polox/blob/main/SECURITY.md
+    about: How to privately report security or privacy concerns

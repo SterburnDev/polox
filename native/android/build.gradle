@@ -1,0 +1,31 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'org.polox.android'
+    compileSdk 36
+    buildToolsVersion '36.1.0'
+
+    defaultConfig {
+        minSdk 24   // Godot 4.7's minimum
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// No warnings allowed: every Android API older phones lack is checked by hand in PoloxAndroid.java.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:all', '-Werror']
+}
+
+dependencies {
+    // Godot's own classes (GodotPlugin and friends): compiled against, never packaged. The jar comes out of
+    // the engine's library (tools/engine/android/godot-lib.template_release.aar), passed in by the export.
+    compileOnly files(providers.gradleProperty('godotClasses').get())
+    // Godot's Godot class is Kotlin: its annotations need the Kotlin library Godot itself is built with.
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib:2.1.21'
+}

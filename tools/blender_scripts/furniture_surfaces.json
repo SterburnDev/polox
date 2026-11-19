@@ -1,0 +1,43 @@
+{
+ "note": "What each furniture material is made of, for texture_furniture.py. 'kinds' maps a Kenney material name to a surface; 'models' overrides it for one model. 'paint' is the material the player's colour tints, so its texture is grey (pattern and shading only).",
+ "large_area_m2": 4.2,
+ "sizes": [512, 1024],
+ "kinds": {
+  "wood": "wood", "woodDark": "wood",
+  "metal": "metal", "metalLight": "metal", "metalMedium": "metal", "metalDark": "metal",
+  "carpet": "fabric", "carpetDarker": "fabric", "carpetWhite": "linen",
+  "glass": "glass", "plant": "leaf", "grass": "leaf", "lamp": "shade",
+  "colorRed": "petal", "colorYellow": "petal", "colorPurple": "petal", "colorWhite": "petal", "colorOrange": "petal",
+  "water": "water", "sand": "sand", "canvas": "linen", "brass": "metal", "keys": "keys", "keysBlack": "plain",
+  "clockFace": "clockface", "_defaultMat": "plain"
+ },
+ "models": {
+  "armchair": {"paint": "fabric"},
+  "sofa": {"paint": "fabric"},
+  "chair": {"paint": "fabric"},
+  "bed": {"paint": "fabric", "carpetWhite": "linen"},
+  "double_bed": {"paint": "fabric", "carpetWhite": "linen"},
+  "bookshelf": {"paint": "wood", "carpetDarker": "books", "carpetWhite": "paper"},
+  "bathtub": {"paint": "ceramic", "carpetWhite": "ceramic"},
+  "toilet": {"paint": "ceramic", "_defaultMat": "ceramic"},
+  "washbasin": {"paint": "ceramic", "carpetWhite": "ceramic"},
+  "shower": {"paint": "ceramic"},
+  "fridge": {"paint": "enamel"},
+  "washer": {"paint": "enamel", "_defaultMat": "enamel"},
+  "stove": {"paint": "enamel", "carpetWhite": "enamel"},
+  "lamp": {"paint": "shade"},
+  "plant": {"paint": "leaf"},
+  "bush": {"paint": "leaf"},
+  "flowers": {"paint": "petal"},
+  "rug": {"paint": "rug", "carpetDarker": "rug"},
+  "runner": {"paint": "rug", "carpetDarker": "rug"},
+  "tv": {"paint": "wood", "metal": "screen", "metalDark": "enamel"},
+  "computer": {"paint": "wood", "metal": "screen", "metalDark": "enamel"},
+  "bean_bag": {"paint": "fabric"},
+  "fish_tank": {"paint": "wood"},
+  "coat_rack": {"paint": "wood"},
+  "bar_stool": {"paint": "fabric"},
+  "wall_clock": {"paint": "wood"}
+ },
+ "default_paint": "wood"
+}

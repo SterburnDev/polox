@@ -1,0 +1,53 @@
+I searched the Testville County records, the permit portal and an archived listing for 12 Example Lane. Here's what I found, in the format you asked for:
+
+```json
+{
+  "schema_version": 1,
+  "request_id": "__REQUEST_ID__",
+  "base_revision": "__BASE_REVISION_TYPO__",
+  "task": "research",
+  "result": {
+    "address_found": true,
+    "summary": "A two-storey wood-frame house from 1962, about 1,450 sq ft, with a 2014 deck.",
+    "facts": [
+      {"key": "year_built", "value": 1962, "source": "s1", "confidence": "0.95", "note": "County assessor record."},
+      {"key": "sqft", "value": "1450", "source": "s1", "confidence": 0.9, "note": "Finished area."},
+      {"key": "floors", "value": 2, "source": "s1", "confidence": 0.9},
+      {"key": "bedrooms", "value": 3, "source": "s1", "confidence": 0.85},
+      {"key": "bathrooms", "value": 2, "source": "s3", "confidence": 0.6, "note": "The listing says 1.5 baths."},
+      {"key": "construction", "value": "wood frame", "source": "s1", "confidence": 0.8}
+    ],
+    "footprint": {"width_m": "10.4", "depth_m": 8.2, "shape_note": "A simple rectangle; the deck is outside it.", "source": "s1"},
+    "rooms": [
+      {"kind": "Living", "name": "Living room", "floor": 0, "width_m": 4.5, "depth_m": 4.0, "position": "front", "source": "s3"},
+      {"kind": "kitchen", "name": "Kitchen", "floor": "0", "width_m": 3.5, "depth_m": 3.2, "position": "back", "source": "s3"},
+      {"kind": "dining", "name": "Dining room", "floor": 0, "width_m": 3.0, "depth_m": 3.2, "position": "back", "source": "s3"},
+      {"kind": "bedroom", "name": "Primary bedroom", "floor": 1, "width_m": 4.0, "depth_m": 3.5, "position": "front", "source": "s3"},
+      {"kind": "bedroom", "name": "Bedroom", "floor": 1, "width_m": 3.2, "depth_m": 3.0, "position": "back", "source": "s3"},
+      {"kind": "bathroom", "name": "Bathroom", "floor": 1, "width_m": 2.2, "depth_m": 2.0, "position": "back", "source": "s3"}
+    ],
+    "permits": [
+      {"year": 1988, "work": "Re-roof", "source": "s2"},
+      {"year": "2014", "work": "Rear deck", "source": "s2"}
+    ],
+    "history": [
+      {"year": 1962, "text": "Built as part of the Example Lane subdivision.", "source": "s1"}
+    ],
+    "conflicts": [
+      {"key": "sqft", "values": [{"value": 1450, "source": "s1"}, {"value": 1520, "source": "s3"}]}
+    ],
+    "sources": [
+      {"id": "s1", "kind": "Assessor", "title": "Testville County Assessor, parcel record", "url": "https://assessor.example.org/parcel/0001", "said": "Built 1962, 1,450 sq ft, 2 floors, 3 bedrooms.", "owner": "Jane Q. Sample"},
+      {"id": "s2", "kind": "permit", "title": "Testville permit portal", "url": "https://permits.example.org/search?parcel=0001", "said": "1988 re-roof, 2014 deck."},
+      {"id": "s3", "kind": "listing", "title": "2019 listing (archived copy)", "url": "https://web.archive.org/web/2019/https://listings.example.org/12-example-lane", "said": "3 bed, 1.5 bath, 1,520 sq ft."},
+    ],
+    "blocked": [],
+    "open_questions": ["Is the half bath next to the kitchen?"],
+    "location": {"lat": "10.0003", "lon": 10.0002, "source": "s1"},
+    "neighbourhood": [{"name": "Example Park", "kind": "park", "note": "A small public park two blocks north.", "source": "s1"}],
+    "assumptions": "Room sizes come from the listing photos and are approximate."
+  }
+}
+```
+
+Let me know if you'd like me to look for the 2009 kitchen permit too!

@@ -1,0 +1,13 @@
+--- a/drivers/gles3/shader_gles3.cpp
++++ b/drivers/gles3/shader_gles3.cpp
+@@ -612,7 +612,9 @@
+ 			GLint link_status = 0;
+ 			glGetProgramiv(specialization.id, GL_LINK_STATUS, &link_status);
+ 			if (link_status != GL_TRUE) {
+-				WARN_PRINT_ONCE("Failed to load cached shader, recompiling.");
++				// Polox: a driver may reject a stored program at any time (OpenGL allows it, e.g. after an app or
++				// driver update); recompiling is the normal answer, not a warning.
++				print_verbose("Cached shader rejected by the driver, recompiling.");
+ 				return false;
+ 			}
+ 

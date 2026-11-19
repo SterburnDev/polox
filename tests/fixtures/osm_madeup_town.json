@@ -1,0 +1,509 @@
+{
+	"version": 0.6,
+	"generator": "a made-up town for Polox's tests",
+	"elements": [
+		{
+			"type": "way",
+			"id": 100,
+			"tags": {
+				"highway": "residential",
+				"name": "Example Lane"
+			},
+			"geometry": [
+				{
+					"lat": 9.9998372,
+					"lon": 9.9981757
+				},
+				{
+					"lat": 9.9998372,
+					"lon": 10.0018243
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 101,
+			"tags": {
+				"highway": "residential",
+				"name": "Maple Street"
+			},
+			"geometry": [
+				{
+					"lat": 10.0018087,
+					"lon": 9.9994527
+				},
+				{
+					"lat": 9.9981913,
+					"lon": 9.9994527
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 102,
+			"tags": {
+				"highway": "footway"
+			},
+			"geometry": [
+				{
+					"lat": 10.0,
+					"lon": 9.9994527
+				},
+				{
+					"lat": 10.0,
+					"lon": 9.9991334
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 103,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "12",
+				"name": "The Samples' house"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 9.9999544
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0000456
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0000456
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 9.9999544
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 9.9999544
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 104,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "14",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 9.9995986
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 9.9996716
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 9.9996716
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 9.9995986
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 9.9995986
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 105,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "16",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 9.9997355
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 9.9998084
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 9.9998084
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 9.9997355
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 9.9997355
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 106,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "18",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 10.0001459
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0002189
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0002189
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0001459
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0001459
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 107,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "20",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 10.0002828
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0003557
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0003557
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0002828
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0002828
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 108,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "22",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 10.0004196
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0004926
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0004926
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0004196
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0004196
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 109,
+			"tags": {
+				"building": "house",
+				"addr:housenumber": "24",
+				"owner": "Somebody Private"
+			},
+			"geometry": [
+				{
+					"lat": 10.0000362,
+					"lon": 10.0005564
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0006294
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0006294
+				},
+				{
+					"lat": 9.9999638,
+					"lon": 10.0005564
+				},
+				{
+					"lat": 10.0000362,
+					"lon": 10.0005564
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 110,
+			"tags": {
+				"building": "house"
+			},
+			"geometry": [
+				{
+					"lat": 9.9997287,
+					"lon": 9.9996899
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 9.9997628
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 9.9997628
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 9.9996899
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 9.9996899
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 111,
+			"tags": {
+				"building": "house"
+			},
+			"geometry": [
+				{
+					"lat": 9.9997287,
+					"lon": 9.9999635
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 10.0000365
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 10.0000365
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 9.9999635
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 9.9999635
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 112,
+			"tags": {
+				"building": "house"
+			},
+			"geometry": [
+				{
+					"lat": 9.9997287,
+					"lon": 10.0002372
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 10.0003101
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 10.0003101
+				},
+				{
+					"lat": 9.9996563,
+					"lon": 10.0002372
+				},
+				{
+					"lat": 9.9997287,
+					"lon": 10.0002372
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 113,
+			"tags": {
+				"building": "school",
+				"amenity": "school",
+				"name": "Testville Elementary"
+			},
+			"geometry": [
+				{
+					"lat": 10.0008139,
+					"lon": 9.9998176
+				},
+				{
+					"lat": 10.0008139,
+					"lon": 10.0002737
+				},
+				{
+					"lat": 10.0005426,
+					"lon": 10.0002737
+				},
+				{
+					"lat": 10.0005426,
+					"lon": 9.9998176
+				},
+				{
+					"lat": 10.0008139,
+					"lon": 9.9998176
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 114,
+			"tags": {
+				"leisure": "park",
+				"name": "Maple Park"
+			},
+			"geometry": [
+				{
+					"lat": 10.0004522,
+					"lon": 9.9986317
+				},
+				{
+					"lat": 10.0004522,
+					"lon": 9.9992703
+				},
+				{
+					"lat": 9.9995478,
+					"lon": 9.9992703
+				},
+				{
+					"lat": 9.9995478,
+					"lon": 9.9986317
+				},
+				{
+					"lat": 10.0004522,
+					"lon": 9.9986317
+				}
+			]
+		},
+		{
+			"type": "way",
+			"id": 115,
+			"tags": {
+				"natural": "water",
+				"name": "Duck Pond"
+			},
+			"geometry": [
+				{
+					"lat": 10.0001357,
+					"lon": 9.9988142
+				},
+				{
+					"lat": 10.0001357,
+					"lon": 9.9989966
+				},
+				{
+					"lat": 9.9999548,
+					"lon": 9.9989966
+				},
+				{
+					"lat": 9.9999548,
+					"lon": 9.9988142
+				},
+				{
+					"lat": 10.0001357,
+					"lon": 9.9988142
+				}
+			]
+		},
+		{
+			"type": "node",
+			"id": 116,
+			"lat": 9.999801,
+			"lon": 9.9994345,
+			"tags": {
+				"shop": "convenience",
+				"name": "Corner Shop"
+			}
+		},
+		{
+			"type": "node",
+			"id": 117,
+			"lat": 10.0003617,
+			"lon": 9.998723,
+			"tags": {
+				"natural": "tree"
+			}
+		},
+		{
+			"type": "node",
+			"id": 118,
+			"lat": 9.9996383,
+			"lon": 9.999179,
+			"tags": {
+				"natural": "tree"
+			}
+		},
+		{
+			"type": "node",
+			"id": 119,
+			"lat": 10.0002713,
+			"lon": 9.9990878,
+			"tags": {
+				"natural": "tree"
+			}
+		},
+		{
+			"type": "node",
+			"id": 120,
+			"lat": 9.9997287,
+			"lon": 9.9986774,
+			"tags": {
+				"natural": "tree"
+			}
+		},
+		{
+			"type": "node",
+			"id": 121,
+			"lat": 9.9999096,
+			"lon": 9.9990878,
+			"tags": {
+				"amenity": "bench"
+			}
+		}
+	]
+}

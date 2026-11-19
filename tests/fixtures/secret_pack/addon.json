@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "id": "built-in",
+  "name": "A private pack (test fixture)",
+  "version": "1.0.0",
+  "description": "Synthetic: one listed picture that exists, and four entries the game must skip.",
+  "secret_images": [
+    "pictures/dot.svg",
+    "pictures/dot.svg",
+    "pictures/missing.png",
+    "../../../assets/secret/yam_01_hello.svg",
+    "notes.txt"
+  ],
+  "overrides": {}
+}

@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "id": "polox-originals",
+  "name": "Polox Originals",
+  "version": "1.0.0",
+  "author": "Polox",
+  "description": "Polox's own music and Soul, made in code: its own tune for the title, the Light World, the Dream World and battles, a low hum while you make your home, and the Dream Drop as your Soul. Turn it on to use them instead of the built-in soundtrack and Soul.",
+  "priority": 5,
+  "enabled_by_default": false,
+  "overrides": {
+    "music": {
+      "menu": "@own",
+      "survey": "@own",
+      "light": "@own",
+      "dark": "@own",
+      "battle": "@own"
+    },
+    "textures": {
+      "soul": "@dream_drop"
+    }
+  }
+}
