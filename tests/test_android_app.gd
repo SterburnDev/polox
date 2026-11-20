@@ -391,8 +391,10 @@ func test_install_helpers_answer_in_plain_words() -> void:
 			["Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]", "Install via USB"], ["adb: no devices/emulators found", "No phone found"]]:
 		var r := AndroidApp.explain_install(str(pair[0]))
 		check(not bool(r[0]) and str(r[1]).contains(str(pair[1])), "%s -> %s" % [pair[0], r[1]])
-	eq(AndroidApp.version_code("1.8.0"), 10800)
-	eq(AndroidApp.version_code("2.10.3"), 21003)
+	eq(AndroidApp.version_code("1.8.0"), 110800)
+	eq(AndroidApp.version_code("2.10.3"), 121003)
+	check(AndroidApp.version_code("1.0.0") > 12900, "Public Beta 1.0 updates an installed 1.29.0 in place")
+	eq(PhoneMode._my_version_code(), AndroidApp.version_code(str(ProjectSettings.get_setting("application/config/version", ""))), "the phone and the PC count the same way")
 	eq(AndroidApp.version_code("bad"), 0)
 	check(AndroidApp.steps_usb().size() >= 4 and AndroidApp.steps_download("http://192.168.1.42:8765").size() >= 4, "step-by-step on the PC")
 	check(" ".join(AndroidApp.steps_download("http://192.168.1.42:8765")).contains("unknown apps"), "including Android's \"install unknown apps\"")
@@ -551,9 +553,9 @@ func test_app_mode_pairs_offers_updates_and_retries_while_the_pc_is_away() -> vo
 	# Updates: only a newer app is offered.
 	_fake_apk(str(ProjectSettings.get_setting("application/config/version", "")), PhoneMode._my_version_code())
 	eq(await pm.check_update(), {}, "the same version: nothing to offer")
-	_fake_apk("9.9.9", 90909)
+	_fake_apk("9.9.9", 199909)
 	var offer: Dictionary = await pm.check_update()
-	eq(int(offer.get("version_code", 0)), 90909, "a newer app is offered")
+	eq(int(offer.get("version_code", 0)), 199909, "a newer app is offered")
 	check(str(offer.get("url", "")).ends_with("/app/polox.apk"))
 	# The PC goes away: retry every so often; when it's back, the retry syncs.
 	await _stop_pc()
@@ -695,7 +697,7 @@ func test_the_app_end_to_end_as_a_second_process() -> void:
 					eq(server.start(port, "127.0.0.1"), "", "Phone Link back on")
 					_write_cmd(cmd, {"step": 3})
 				"resynced":
-					_fake_apk("9.9.9", 90909)
+					_fake_apk("9.9.9", 199909)
 					_write_cmd(cmd, {"step": 4})
 				"done", "fail":
 					finished = true
@@ -737,7 +739,7 @@ func test_the_app_end_to_end_as_a_second_process() -> void:
 	eq((phone_room.get("tiles", []) as Array).size(), pushed_tiles + 1, "the phone keeps its offline block after reconnect")
 	eq((SaveManager.load_room(str(pushed.get("room", ""))).get("tiles", []) as Array).size(), pushed_tiles + 1, "the PC has the offline block")
 	check(bool(steps.get("resumed", {}).get("synced_again", false)), "coming back to the app syncs")
-	eq(int(steps.get("update", {}).get("offer", {}).get("version_code", 0)), 90909, "the newer app on the PC is offered")
+	eq(int(steps.get("update", {}).get("offer", {}).get("version_code", 0)), 199909, "the newer app on the PC is offered")
 	check(steps.has("done"), "the app's run finished")
 	await _stop_pc()
 
@@ -766,7 +768,7 @@ func test_polox_exe_carries_its_build_id_and_finds_the_app_beside_it() -> void:
 	var f := FileAccess.open(dir.path_join("polox.apk"), FileAccess.WRITE)
 	f.store_string("not really an apk")
 	f.close()
-	JsonUtil.write_json(dir.path_join("polox.json"), {"version": "9.9.9", "version_code": 90909, "size": "not really an apk".length()})
+	JsonUtil.write_json(dir.path_join("polox.json"), {"version": "9.9.9", "version_code": 199909, "size": "not really an apk".length()})
 	var info := AndroidApp.apk_info(dir.path_join("polox.apk"))
 	check(bool(info.present) and str(info.version) == "9.9.9", "an APK beside Polox.exe is found with its details: %s" % str(info))
 

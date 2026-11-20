@@ -52,12 +52,16 @@ static func apk_info(apk: String = "", info_file: String = "") -> Dictionary:
 	return out
 
 
-## 1.8.0 -> 10800 (the Android version code; export_presets.cfg keeps the same number).
+## Public Beta 1.0 restarted the version at 1.0.0 after 1.29.0 (code 12900). Every code since adds this,
+## so Android still sees each release as newer and updates the app in place. PhoneMode uses the same number.
+const CODE_BASE := 100000
+
+## 1.8.0 -> 110800 (the Android version code; export_presets.cfg keeps the same number).
 static func version_code(version: String) -> int:
 	var p := version.split(".")
 	if p.size() < 3:
 		return 0
-	return p[0].to_int() * 10000 + p[1].to_int() * 100 + p[2].to_int()
+	return CODE_BASE + p[0].to_int() * 10000 + p[1].to_int() * 100 + p[2].to_int()
 
 
 func adb_path() -> String:

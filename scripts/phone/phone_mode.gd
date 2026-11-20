@@ -297,7 +297,8 @@ func check_update() -> Dictionary:
 
 static func _my_version_code() -> int:
 	var p := str(ProjectSettings.get_setting("application/config/version", "0.0.0")).split(".")
-	return (p[0].to_int() * 10000 + p[1].to_int() * 100 + p[2].to_int()) if p.size() >= 3 else 0
+	# The same formula as AndroidApp.version_code, CODE_BASE (100000) included.
+	return (100000 + p[0].to_int() * 10000 + p[1].to_int() * 100 + p[2].to_int()) if p.size() >= 3 else 0
 
 
 ## Opens the PC's APK in the phone's browser: it downloads, and Android's installer updates
