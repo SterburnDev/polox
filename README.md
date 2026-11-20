@@ -6,6 +6,14 @@ Build rooms, draw the **Bramins** who live in your **Dream World**, and talk wit
 
 Polox is built in **Godot 4.7.2** and written entirely in **GDScript**. It runs on Windows, Android, and in a phone's browser via Phone Link. Everything stays on your own devices: no accounts, no telemetry, no ads.
 
+## Trailer
+
+[![The Polox trailer: the POLOX logo with the player and two Bramins](docs/media/trailer-poster.jpg)](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4)
+
+**[Watch the trailer](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4)** (1080p, 1 minute) or the [smaller 720p copy](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-720p.mp4).
+Song: Zachz Winner, Фрози, Joyful - Boogie. Music provided by NoCopyrightSounds ([ncs.io/boogie](https://ncs.io/boogie/67vx9bp)).
+Character.AI is a trademark of its owner; Polox is not affiliated with or endorsed by Character.AI.
+
 ![A made-up world: an outdoor place, a friend, the day's card](docs/images/world.png)
 
 ## Highlights in Polox Public Beta 1.0
