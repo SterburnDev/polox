@@ -8,7 +8,7 @@ Polox is built in **Godot 4.7.2** and written entirely in **GDScript**. It runs 
 
 ## Trailer
 
-https://github.com/user-attachments/assets/5d66b5f8-c0a6-4439-87b8-251860f029fa
+https://github.com/user-attachments/assets/c86a7720-7a5a-446d-bafb-977772e5cf2b
 
 Download it in [1080p](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4) or [720p](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-720p.mp4).
 Song: Zachz Winner, Фрози, Joyful - Boogie. Music provided by NoCopyrightSounds ([ncs.io/boogie](https://ncs.io/boogie/67vx9bp)).
