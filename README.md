@@ -8,9 +8,9 @@ Polox is built in **Godot 4.7.2** and written entirely in **GDScript**. It runs 
 
 ## Trailer
 
-[![The Polox trailer: the POLOX logo with the player and two Bramins](docs/media/trailer-poster.jpg)](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4)
+https://github.com/user-attachments/assets/5d66b5f8-c0a6-4439-87b8-251860f029fa
 
-**[Watch the trailer](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4)** (1080p, 1 minute) or the [smaller 720p copy](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-720p.mp4).
+Download it in [1080p](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-1080p.mp4) or [720p](https://github.com/SterburnDev/polox/releases/download/v1.0.0/Polox-Trailer-720p.mp4).
 Song: Zachz Winner, Фрози, Joyful - Boogie. Music provided by NoCopyrightSounds ([ncs.io/boogie](https://ncs.io/boogie/67vx9bp)).
 Character.AI is a trademark of its owner; Polox is not affiliated with or endorsed by Character.AI.
 
