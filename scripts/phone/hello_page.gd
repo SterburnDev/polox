@@ -4,7 +4,10 @@ extends RefCounted
 ## phone version is there, and buttons back to the launcher or the game. It
 ## separates network problems ("can't reach the PC") from game problems
 ## ("reached it, but the game won't start"). /hello.json is the same for
-## scripts and the Doctor. Nothing secret is on either.
+## scripts and the Doctor: in full (addresses, Tailscale name, app version)
+## only for this PC itself or a paired phone's key; anyone else on the network
+## gets {ok, app, version, build_id, pc_name, mode, pair_v?}, which finding the
+## PC needs. Nothing secret is on either.
 
 const LauncherPage := preload("res://scripts/phone/launcher_page.gd")
 
@@ -56,14 +59,22 @@ dl { margin: 10px 0; } dt { color: #b8aed6; font-size: 15px; margin-top: 8px; } 
 		_esc(str(info.get("build_id", "")).substr(0, 8)), buttons, safe, SCRIPT]
 
 
-static func json(info: Dictionary) -> String:
-	return JSON.stringify({
+static func json(info: Dictionary, full: bool = false) -> String:
+	var brief := {
 		"ok": true, "app": "Polox", "version": str(info.get("version", "")), "build_id": str(info.get("build_id", "")),
-		"mode": str(info.get("mode", "")), "canonical": str(info.get("canonical", "")), "urls": info.get("urls", []),
-		"lan_url": str(info.get("lan_url", "")), "ts_url": str(info.get("ts_url", "")), "pc_name": str(info.get("pc_name", "")),
+		"pc_name": str(info.get("pc_name", "")), "mode": str(info.get("mode", "")),
+	}
+	if int(info.get("pair_v", 0)) == 1:
+		brief["pair_v"] = 1
+	if not full:
+		return JSON.stringify(brief)
+	brief.merge({
+		"canonical": str(info.get("canonical", "")), "urls": info.get("urls", []),
+		"lan_url": str(info.get("lan_url", "")), "ts_url": str(info.get("ts_url", "")),
 		"app_version": str(info.get("apk", {}).get("version", "")), "app_code": int(info.get("apk", {}).get("version_code", 0)),
 		"web_build": bool(info.get("has_game", false)), "web_build_current": bool(info.get("game_current", true)),
-	})
+	}, true)
+	return JSON.stringify(brief)
 
 
 static func _esc(s: String) -> String:

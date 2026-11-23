@@ -604,6 +604,7 @@ func refresh_page_info() -> void:
 		"has_game": bool(wb.present), "game_current": bool(wb.current) or str(wb.build_id) == "",
 		"game_mb": float(wb.mb),
 		"always_ask": pairing.always_ask,
+		"pair_v": Pairing.PAIR_WRAP_VERSION if pairing.wrap_supported() else 0,
 		"login": str(ts_status.get("login", "")) if require_login and mode == "tailscale_serve" else "",
 		"game_path": game_prefix_for(web_dir),
 		"apk": AndroidApp.apk_info(apk_file),
@@ -633,6 +634,16 @@ static func is_pc_itself(req: Dictionary) -> bool:
 	return NetRules.kind(str(req.get("ip", ""))) == "loopback" and name in ["localhost", "127.0.0.1", "[::1]"]
 
 
+## /hello.json in full: a request from this PC itself (not through Tailscale Serve or the bundled
+## server, which both arrive from 127.0.0.1 too), or one that carries a paired phone's key.
+func hello_in_full(req: Dictionary) -> bool:
+	var headers: Dictionary = req.get("headers", {})
+	var forwarded := headers.has("x-forwarded-for") or headers.has("tailscale-user-login") or bool(req.get("proxied", false))
+	if NetRules.kind(str(req.get("ip", ""))) == "loopback" and not forwarded:
+		return true
+	return pairing != null and pairing.token_is_valid(HttpUtil.bearer(headers))
+
+
 func _page(req: Dictionary) -> Variant:
 	var path := str(req.path)
 	var info := page_info()
@@ -643,7 +654,9 @@ func _page(req: Dictionary) -> Variant:
 		"/hello":
 			return HttpUtil.response(200, HelloPage.html(info).to_utf8_buffer(), "text/html; charset=utf-8")
 		"/hello.json":
-			return HttpUtil.response(200, HelloPage.json(info).to_utf8_buffer(), "application/json")
+			# The addresses (and the rest) only for this PC itself or a paired phone; anyone else on the
+			# network learns that Polox is here and its name, which finding the PC needs anyway.
+			return HttpUtil.response(200, HelloPage.json(info, hello_in_full(req)).to_utf8_buffer(), "application/json")
 		"/", "/pair", "/pair.html", "/worlds":
 			return HttpUtil.response(200, LauncherPage.html(info, is_pc_itself(req)).to_utf8_buffer(), "text/html; charset=utf-8")
 		"/app", "/app/":
