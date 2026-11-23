@@ -4,12 +4,14 @@ extends RefCounted
 ## worlds list work even when the phone version of the game isn't built.
 ##
 ##   Connected to "<PC>"  ->  Enter the PIN shown on your PC (6 digits)
-##   ->  Your worlds (cover, name, last played, size)  ->  Play
+##   ->  Check these words match your PC  ->  Your worlds (cover, name, last played, size)  ->  Play
 ##   + Forget this phone, Having trouble? (/hello)
 ##
 ## The device key goes to localStorage "polox_token" (the game reads it from
-## there); covers are fetched with the key and shown as blob: URLs (an <img>
-## can't send it). The PIN only ever travels in a POST body, never a URL.
+## there) once the words were checked; covers are fetched with the key and shown
+## as blob: URLs (an <img> can't send it). The PIN never travels readable: it is
+## sealed to the PC's key (pair_v:1, pairing.gd) and the key comes back encrypted.
+## Only a browser without BigInt pairs the old way (the PIN in the POST body).
 ## Built with replace(), not "%": the CSS and JS are full of percent signs.
 ## No backslashes in the JS either (GDScript would eat them).
 ## Tags: [PAIRING]
@@ -56,6 +58,7 @@ button.small, a.small { min-height: 46px; line-height: 40px; font-size: 17px; fo
 .foot { display: flex; gap: 10px; }
 .foot > * { flex: 1; }
 .big { font-size: 64px; text-align: center; margin: 4px 0; }
+.words { font-size: 30px; font-weight: 700; color: var(--yellow); text-align: center; margin: 14px 0; overflow-wrap: anywhere; }
 """
 
 const BODY := """<main>
@@ -73,6 +76,13 @@ const BODY := """<main>
       <button id="pinbtn" class="main" type="submit">Continue</button>
     </form>
     <p id="pinmsg" class="msg" role="status"></p>
+  </section>
+  <section id="s-verify" class="hide">
+    <h2>Check these words match your PC</h2>
+    <p id="words" class="words"></p>
+    <p>Your PC's Phone Link screen shows three words now. If they are different, something on the network may be in between: tap They don't match.</p>
+    <button id="vyes" class="main" type="button">They match</button>
+    <button id="vno" type="button">They don't match</button>
   </section>
   <section id="s-worlds" class="hide">
     <h2>Your worlds</h2>
@@ -93,7 +103,141 @@ const BODY := """<main>
 <p id="addr" class="msg hide"></p>
 </main>"""
 
+## pair_v:1 in the browser (pairing.gd has the protocol). crypto.subtle is missing on a plain-HTTP
+## address, so SHA-256, HMAC, PBKDF2 and the RSA seal are here, on Uint8Arrays, in plain JavaScript.
+## BigInt is only ever called (never written as 1n): a browser without it still runs the page and
+## pairs the old way. Comparisons are XOR loops; keys, secrets and the PIN's bytes are zeroed after use.
+const PAIR_CRYPTO := """
+const pairWords = {{WORDS}};
+const shaK = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function pxText(s) { return new TextEncoder().encode(s); }
+function pxCat(a, b) { const out = new Uint8Array(a.length + b.length); out.set(a); out.set(b, a.length); return out; }
+function pxWipe(a) { if (a && a.fill) a.fill(0); }
+function pxHex(a) { let s = ""; for (const b of a) s += (b + 256).toString(16).slice(1); return s; }
+function pxUnhex(s) {
+  if (s.length % 2 || !/^[0-9a-f]*$/.test(s)) throw new Error("hex");
+  const out = new Uint8Array(s.length / 2); for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16); return out;
+}
+function pxB64(s) { const bin = atob(String(s)); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+function pxRandomHex(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); const s = pxHex(a); pxWipe(a); return s; }
+function pxSame(a, b) {
+  let diff = a.length ^ b.length; const n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) diff |= (i < a.length ? a.charCodeAt(i) : 0) ^ (i < b.length ? b.charCodeAt(i) : 0);
+  return diff === 0;
+}
+function pxSha256(input) {
+  const bits = input.length * 8, total = Math.ceil((input.length + 9) / 64) * 64, bytes = new Uint8Array(total);
+  bytes.set(input); bytes[input.length] = 128; const view = new DataView(bytes.buffer);
+  view.setUint32(total - 8, Math.floor(bits / 4294967296), false); view.setUint32(total - 4, bits >>> 0, false);
+  const h = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const w = new Uint32Array(64), rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < total; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(off + i * 4, false);
+    for (let i = 16; i < 64; i++) { const x = w[i - 15], y = w[i - 2]; w[i] = (w[i - 16] + (rotr(x, 7) ^ rotr(x, 18) ^ (x >>> 3)) + w[i - 7] + (rotr(y, 17) ^ rotr(y, 19) ^ (y >>> 10))) >>> 0; }
+    let a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], q = h[7];
+    for (let i = 0; i < 64; i++) {
+      const t1 = (q + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + shaK[i] + w[i]) >>> 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      q = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;
+    h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + q) >>> 0;
+  }
+  const out = new Uint8Array(32), result = new DataView(out.buffer); for (let i = 0; i < 8; i++) result.setUint32(i * 4, h[i], false);
+  pxWipe(bytes); pxWipe(w); pxWipe(h); return out;
+}
+function pxHmac(key, message) {
+  const k = key.length > 64 ? pxSha256(key) : key;
+  const innerPad = new Uint8Array(64), outerPad = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) { const b = i < k.length ? k[i] : 0; innerPad[i] = b ^ 0x36; outerPad[i] = b ^ 0x5c; }
+  const innerIn = pxCat(innerPad, message), inner = pxSha256(innerIn), outerIn = pxCat(outerPad, inner), out = pxSha256(outerIn);
+  pxWipe(innerPad); pxWipe(outerPad); pxWipe(innerIn); pxWipe(inner); pxWipe(outerIn); if (k !== key) pxWipe(k); return out;
+}
+function pxPbkdf2(password, salt, iterations) {
+  if (!Number.isInteger(iterations) || iterations < 10000 || iterations > 100000) throw new Error("iter");
+  const first = pxCat(salt, new Uint8Array([0, 0, 0, 1]));
+  let u = pxHmac(password, first); const t = u.slice(); pxWipe(first);
+  for (let i = 1; i < iterations; i++) { const next = pxHmac(password, u); for (let j = 0; j < 32; j++) t[j] ^= next[j]; pxWipe(u); u = next; }
+  pxWipe(u); return t;
+}
+function pxDer(b, at) {
+  if (at + 2 > b.length) throw new Error("der");
+  let len = b[at + 1], p = at + 2;
+  if (len > 127) { const n = len - 128; if (n < 1 || n > 3) throw new Error("der"); len = 0; for (let i = 0; i < n; i++) len = len * 256 + b[p++]; }
+  if (p + len > b.length) throw new Error("der");
+  return { tag: b[at], start: p, end: p + len };
+}
+function pxRsaKey(spki) {
+  const top = pxDer(spki, 0), alg = pxDer(spki, top.start), oid = pxDer(spki, alg.start), bits = pxDer(spki, alg.end);
+  if (top.tag !== 48 || top.end !== spki.length || alg.tag !== 48 || oid.tag !== 6 || bits.tag !== 3 || spki[bits.start] !== 0) throw new Error("der");
+  if (pxHex(spki.slice(oid.start, oid.end)) !== "2a864886f70d010101") throw new Error("der");
+  const seq = pxDer(spki, bits.start + 1), n = pxDer(spki, seq.start), e = pxDer(spki, n.end);
+  if (seq.tag !== 48 || n.tag !== 2 || e.tag !== 2) throw new Error("der");
+  let nb = spki.slice(n.start, n.end); while (nb.length > 0 && nb[0] === 0) nb = nb.slice(1);
+  const key = { n: BigInt("0x" + pxHex(nb)), e: BigInt("0x" + pxHex(spki.slice(e.start, e.end))), size: nb.length };
+  if (key.size !== 256 || nb[0] < 128 || key.e !== BigInt(65537)) throw new Error("rsa");
+  return key;
+}
+function pxModPow(base, exp, mod) {
+  const zero = BigInt(0), one = BigInt(1), two = BigInt(2);
+  let r = one, b = base % mod, e = exp;
+  while (e > zero) { if (e % two === one) r = r * b % mod; e = e / two; b = b * b % mod; }
+  return r;
+}
+function pxSeal(key, message) {
+  const k = key.size, ps = k - 3 - message.length; if (ps < 8) throw new Error("long");
+  const em = new Uint8Array(k), pad = new Uint8Array(ps), one = new Uint8Array(1); em[1] = 2; crypto.getRandomValues(pad);
+  for (let i = 0; i < ps; i++) { while (pad[i] === 0) { crypto.getRandomValues(one); pad[i] = one[0]; } em[2 + i] = pad[i]; }
+  em.set(message, 3 + ps);
+  const c = pxModPow(BigInt("0x" + pxHex(em)), key.e, key.n).toString(16);
+  pxWipe(em); pxWipe(pad); pxWipe(one);
+  return c.padStart(k * 2, "0");
+}
+function pairCan(cap) {
+  return !!cap && cap.pair_v === 1 && cap.kdf === "pbkdf2-sha256" && cap.seal === "rsa2048-pkcs1v15" && typeof BigInt === "function"
+    && typeof TextEncoder === "function" && typeof atob === "function" && !!(window.crypto && crypto.getRandomValues);
+}
+function pairSeal(cap, pin) {
+  const salt = String(cap.salt || "").toLowerCase(), iter = Number(cap.iter);
+  if (!/^[0-9a-f]{32}$/.test(salt) || !Number.isInteger(iter) || iter < 10000 || iter > 100000 || typeof cap.pub !== "string") throw new Error("shape");
+  const spki = pxB64(cap.pub), key = pxRsaKey(spki), fp = pxHex(pxSha256(spki)), nonce = pxRandomHex(16), secret = pxRandomHex(32);
+  const message = pxText("pair1|" + salt + "|" + nonce + "|" + secret + "|" + pin), sealed = pxSeal(key, message);
+  pxWipe(message);
+  return { salt: salt, iter: iter, nonce: nonce, secret: secret, fp: fp, sealed: sealed };
+}
+function pairPhrase(token, fp) {
+  const t = pxText(token), mac = pxHmac(t, pxText("polox verify v1|" + fp)), words = [];
+  for (let i = 0; i < 3; i++) words.push(pairWords[mac[i] % 64]);
+  pxWipe(t); pxWipe(mac); return words.join(" ");
+}
+function pairKey(pin, w) {
+  const pinBytes = pxText(pin), saltBytes = pxUnhex(w.salt), stretched = pxPbkdf2(pinBytes, saltBytes, w.iter), secret = pxUnhex(w.secret), key = pxHmac(secret, stretched);
+  pxWipe(pinBytes); pxWipe(saltBytes); pxWipe(stretched); pxWipe(secret); return key;
+}
+function pairOpen(j, pin, w) {
+  const ct = String(j.ct || "").toLowerCase(), tag = String(j.tag || "").toLowerCase();
+  if (j.pair_v !== 1 || j.token !== undefined || !/^[0-9a-f]{128}$/.test(ct) || !/^[0-9a-f]{32}$/.test(tag)) throw new Error("shape");
+  const key = pairKey(pin, w), label = w.iter + "|" + w.salt + "|" + w.nonce + "|", mac = pxHmac(key, pxText("tag|1|" + label + ct)), expected = pxHex(mac).slice(0, 32);
+  pxWipe(mac);
+  if (!pxSame(expected, tag)) { pxWipe(key); throw new Error("verify"); }
+  const plain = pxUnhex(ct); let offset = 0;
+  for (let block = 0; offset < 64; block++) {
+    const stream = pxHmac(key, pxText("enc|1|" + label + block));
+    for (let i = 0; i < 32 && offset < 64; i++, offset++) plain[offset] ^= stream[i];
+    pxWipe(stream);
+  }
+  let token = ""; for (const b of plain) token += String.fromCharCode(b);
+  pxWipe(key); pxWipe(plain); w.secret = "";
+  if (!/^[0-9a-f]{64}$/.test(token)) throw new Error("token");
+  const phrase = pairPhrase(token, w.fp);
+  if (typeof j.phrase === "string" && !pxSame(j.phrase, phrase)) throw new Error("phrase");
+  return { token: token, phrase: phrase };
+}
+"""
+
+
 const SCRIPT := """
+{{PAIR_CRYPTO}}
 const info = JSON.parse(document.getElementById("info").textContent);
 const $ = (id) => document.getElementById(id);
 const store = { get: (k) => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
@@ -117,7 +261,7 @@ function clientId() {
 const ua = navigator.userAgent || "";
 $("name").value = store.get("polox_name") || (/iPhone|iPad/.test(ua) ? "iPhone" : /Android/i.test(ua) ? "Android phone" : "My phone");
 function show(which) {
-  for (const s of ["s-pin", "s-worlds", "s-down"]) $(s).classList.toggle("hide", s !== which);
+  for (const s of ["s-pin", "s-verify", "s-worlds", "s-down"]) $(s).classList.toggle("hide", s !== which);
   $("forget").classList.toggle("hide", which !== "s-worlds");
 }
 function token() { return store.get("polox_token"); }
@@ -147,7 +291,8 @@ async function showPin(note) {
   $("pinmsg").textContent = note || "";
   $("pinmsg").classList.remove("bad");
   try {
-    const r = await (await api("/api/pairing")).json();
+    const r = await (await api("/api/pairing?wrap=1")).json();
+    pairCap = r;
     if (r.paused) { $("pin").disabled = true; $("pinbtn").disabled = true;
       $("pinmsg").textContent = "Pairing is paused after too many wrong PINs. On the PC press Unlock pairing, then reload this page."; return; }
     if (r.cooldown > 0) { cooldown(r.cooldown); return; }
@@ -156,23 +301,65 @@ async function showPin(note) {
   setTimeout(() => $("pin").focus(), 50);
 }
 let sending = false;
+let pairCap = null;    // the PIN screen's /api/pairing?wrap=1 answer (salt and iter for this PIN)
+let pending = null;    // a key that arrived, kept only in memory until the words are checked
+const notVerified = "Response didn't verify: possible interference. Nothing was saved on this phone. On the PC, forget any phone you don't know, then type the new PIN.";
+function interference() {
+  $("pin").value = ""; $("pinmsg").classList.add("bad"); $("pinmsg").textContent = notVerified;
+}
 async function sendPin() {
   const pin = $("pin").value.replace(/[^0-9]/g, "");
   if (pin.length !== 6 || sending) { $("pinmsg").textContent = "The PIN has 6 digits."; return; }
   sending = true;
+  $("pinmsg").classList.remove("bad");
   $("pinmsg").textContent = "Checking...";
   store.set("polox_name", $("name").value);
   try {
-    const r = await api("/api/pair", { method: "POST", body: JSON.stringify({ code: pin, device: $("name").value, client: clientId() }) });
+    // Asked again now: the salt belongs to the PIN on the PC's screen, which may have changed since.
+    try { pairCap = await (await api("/api/pairing?wrap=1")).json(); } catch (e) {}
+    const body = { device: $("name").value, client: clientId() };
+    let wrap = null;
+    if (pairCan(pairCap)) {
+      try { wrap = pairSeal(pairCap, pin); } catch (e) { interference(); sending = false; return; }
+      body.pair_v = 1; body.salt = wrap.salt; body.nonce = wrap.nonce; body.sealed = wrap.sealed;
+    } else {
+      body.code = pin;   // an old browser (no BigInt): the old way
+    }
+    const r = await api("/api/pair", { method: "POST", body: JSON.stringify(body) });
     const j = await r.json();
     $("pin").value = "";
-    if (j.ok) { store.set("polox_token", j.token); store.set("polox_token_at", here); await showWorlds(); }
+    if (j.ok && wrap) {
+      let opened = null;
+      try { opened = pairOpen(j, pin, wrap); } catch (e) { opened = null; }
+      if (opened) { showWords(opened); } else { interference(); }
+    }
+    else if (j.ok) { store.set("polox_token", j.token); store.set("polox_token_at", here); await showWorlds(); }
+    else if (r.status === 409 && j.stale_salt) { await showPin("The PC has a new PIN. Type the new PIN shown on your PC."); }
     else if (r.status === 429) { cooldown(j.retry_after || 60); }
     else if (r.status === 423) { $("pin").disabled = true; $("pinbtn").disabled = true; $("pinmsg").textContent = j.error; }
     else { $("pinmsg").textContent = j.error + (j.tries_left ? " " + j.tries_left + (j.tries_left === 1 ? " try" : " tries") + " left before a short wait." : ""); }
   } catch (e) { $("pinmsg").textContent = "Couldn't reach your PC. Is Phone Link still on?"; }
   sending = false;
 }
+function showWords(opened) {
+  pending = opened;
+  $("words").textContent = opened.phrase;
+  show("s-verify");
+  $("vyes").focus();
+}
+$("vyes").onclick = async () => {
+  if (!pending) return;
+  store.set("polox_token", pending.token); store.set("polox_token_at", here); pending = null;
+  await showWorlds();
+};
+$("vno").onclick = async () => {
+  const p = pending; pending = null;
+  if (p) {
+    try { await fetch("/api/unpair", { method: "POST", body: "{}", cache: "no-store", headers: { "Authorization": "Bearer " + p.token, "Content-Type": "application/json" } }); } catch (e) {}
+  }
+  await showPin("Those words didn't match, so this pairing was removed. On the PC, forget any phone you don't know, then type the new PIN.");
+  $("pinmsg").classList.add("bad");
+};
 $("pinform").onsubmit = (e) => { e.preventDefault(); sendPin(); };
 $("pin").oninput = () => { const v = $("pin").value.replace(/[^0-9]/g, "").slice(0, 6); $("pin").value = v; if (v.length === 6) sendPin(); };
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
@@ -259,4 +446,11 @@ static func html(info: Dictionary, is_pc: bool = false) -> String:
 		+ "<title>Polox</title><style>" + STYLE + "</style></head><body>"
 		+ BODY.replace("{{PCNOTE}}", pcnote)
 		+ "<script type=\"application/json\" id=\"info\">" + JSON.stringify(data).replace("<", "\\u003c") + "</script>"
-		+ "<script>" + SCRIPT + "</script></body></html>")
+		+ "<script>" + page_script() + "</script></body></html>")
+
+
+## The page's JavaScript with the pairing helpers in it (the check words come from pairing.gd,
+## so both ends always use the same list).
+static func page_script() -> String:
+	var Pairing := preload("res://scripts/phone/pairing.gd")
+	return SCRIPT.replace("{{PAIR_CRYPTO}}", PAIR_CRYPTO.replace("{{WORDS}}", JSON.stringify(Pairing.VERIFY_WORDS)))
