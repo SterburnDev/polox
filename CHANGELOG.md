@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (security: Phone Link pairing)
+
+- **Pairing on Same Wi-Fi no longer shows the PIN or the phone's key to anyone listening (pair_v:1).** The launcher and the Android app seal the PIN to an RSA-2048 key the PC makes for the session (memory only), and the key comes back encrypted and authenticated. A changed answer ends at "Response didn't verify: possible interference" with nothing kept. Both screens then show three **check words**: compare them, and tap *They don't match* if they differ (the new key is forgotten on both sides). Every old limit still applies (cooldowns, the hourly pause, the PIN changing after 10 wrong tries), and a seal that doesn't open counts as a wrong PIN. Older apps keep pairing the old way, and the PC warns "paired the old way" for them. An app that paired safely with a PC refuses the old way from that PC. Later requests on Same Wi-Fi still carry the key in plain HTTP (`SECURITY.md`, Known limits).
+- **`/hello.json` tells strangers less.** Without a paired key it says only that Polox is there, its version and the PC's name. The addresses, the Tailscale name and the app version go to this PC itself and to paired phones (the app now asks again with its key after pairing, so it still learns the Tailscale address).
+- **Housekeeping:** upload chunks a phone abandoned (`.part`) are removed after a day, the wrong-PIN flood guard forgets addresses after an hour, a phone report that arrived in a GET address (anyone can make such a link) is marked ⚠ on the PC, and `audit.log` notes how each phone paired and the check words, never a key or a PIN.
+
 ## Polox Public Beta 1.0 (1.0.0) — Public GitHub Release (2026-11-18)
 
 - **Version & public GitHub polish:** Set release label to **Polox Public Beta 1.0** (`1.0.0`, Android version code `110000`: codes now start at 100000, so the app still installs over 1.29.0 (12900) as an update), added `.github/` CI hygiene checks and issue/PR templates, added `docs/INDEX.md`, `docs/GOOGLE_MAPS.md`, and `tools/setup_local_pack.py`, and renamed the last legacy player-facing `"Dark World layout"` folder shortcut/guide text to `"Dream World layout"` while preserving all save compatibility.

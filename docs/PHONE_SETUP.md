@@ -41,6 +41,9 @@ goes straight to its PIN (several: tap yours). Type the PIN on the big keypad or
 (the field under the keypad), or tap **Scan the QR code** and point the camera at Settings > Phone Link >
 Polox for Android > **Pair the app** on the PC (that code holds the address and the same PIN; the camera is asked
 for only then). Can't hear the PC (guest Wi-Fi, a router that blocks broadcasts)? **Type the address** works too.
+After the PIN the app shows **three check words**; the PC's Phone Link screen (or the host window) shows three
+words at the same moment. Same words: tap **They match**. Different words: tap **They don't match** (the new
+key is forgotten on both sides), forget any phone you don't know on the PC, and pair again.
 Skipped this screen? The title screen and Settings both show **Connect to your PC** until the phone is paired.
 
 **Playing:** the app says which path it uses: the **home network**, the **last address** that worked, or
@@ -68,7 +71,10 @@ Your phone and the PC on the same home Wi-Fi (or the PC on a cable to the same r
    `localhost`**: on a phone that means the phone itself.
 3. The phone shows **Polox: Connected to "DESKTOP-..."** and **Enter the PIN shown on your PC**. On the PC a
    banner pops up over whatever you're doing: **📱 Phone connecting: PIN 482 913**.
-4. Type the PIN. The phone shows **Your worlds** (cover, name, last played, size).
+4. Type the PIN. The phone shows **Check these words match your PC** with three words, and the PC shows
+   three words too (Phone Link screen, the banner, the host window). Same words: **They match**, and the phone
+   shows **Your worlds** (cover, name, last played, size). The PIN never crosses the Wi-Fi readable: the
+   phone seals it to a key the PC made for this session, and the phone's new key comes back encrypted.
 5. Tap **Play** on a world. The game loads (the first time ~10 MB, a few seconds), copies that world from the
    PC and starts in it.
 6. Optional: Chrome ⋮ > **Add to Home screen** while you're on the worlds list, for a full-screen icon.
@@ -180,6 +186,10 @@ or chats.
 | "That PIN isn't right. N tries left" | Typo or an old PIN | Type the PIN the PC shows now (it changes every 10 minutes and after each pairing). |
 | "Too many wrong PINs. Try again in N s" | 5 wrong tries from this phone | Wait for the countdown. |
 | "Pairing is paused" | 20 wrong PINs in an hour | On the PC: Phone Link > **Unlock pairing**, then reload. |
+| "The PC has a new PIN" | The PIN changed while you typed (every 10 minutes, after each pairing, or New PIN) | Type the PIN the PC shows now. |
+| "Response didn't verify: possible interference" | The PC's answer arrived changed (or from something pretending to be the PC). Nothing was kept on the phone | On the PC, **Forget** any phone you don't recognise, then pair again with the new PIN. If it keeps happening on this Wi-Fi, use Tailscale. |
+| The check words differ between phone and PC | Something on the network may be in between | **They don't match**, then forget unknown phones on the PC and pair again (Tailscale if it repeats). |
+| PC: "⚠ … paired the old way" | An older Polox app or a very old browser paired: its key crossed the Wi-Fi unencrypted | Update Polox on that phone, **Forget** it on the PC and pair again. |
 | Play says the game files aren't built / are older | The phone version is missing or stale | On the PC: Phone Link > **Build the phone version** (or `phone_doctor.bat`). Your worlds are safe. |
 | "No worlds are shared with phones yet" | Every world is switched off | Save menu > ⋯ > **Available on phone**. |
 | "PC offline" (in the game) | PC asleep, Polox closed, or Phone Link off | Switch it on; Advanced: Keep this PC awake. |
@@ -193,7 +203,14 @@ or chats.
   those to **your** AI provider exactly like chats on the PC (Mock and Ollama stay entirely local).
 - Never: `settings.json`, your API key, other worlds, backups, or anything outside your PersonalData folder.
 - Every request needs the phone's key, except the launcher page, typing the PIN, `/hello` and the game
-  files. The PIN is never written to a log or put in an address. Paths are
+  files. `/hello.json` tells a device without a key only that Polox is there, its version and the PC's name
+  (what finding the PC needs); the addresses and the rest go to this PC itself and to paired phones.
+- Pairing (pair_v:1): the phone seals the PIN with the PC's RSA-2048 key for this session (made when a
+  phone first asks, kept only in memory, gone when Phone Link stops); the PC sends the phone's key back
+  encrypted and authenticated, and both screens show three check words. Older apps and browsers without
+  BigInt still pair the old way (PIN and key readable on the Wi-Fi); the PC says so. On Same Wi-Fi every
+  later request still carries the key in a plain-HTTP header (see SECURITY.md, Known limits).
+- The PIN is never written to a log or put in an address. Paths are
   checked against a list; `..` tricks, folders and listings are refused; other web pages can't read
   anything (no CORS). `PersonalData\phone\audit.log` lists pairings and refusals;
   `phone_link.log` lists requests (time, address, path, status: never keys, codes or chats).
