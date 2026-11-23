@@ -5,7 +5,9 @@ extends RefCounted
 ## the API key on the PC: the phone sends the messages, the PC asks the AI.
 ##
 ##   GET  /api/pairing                               -> {paused, cooldown} for this address (no key needed)
+##        ?wrap=1                                    -> + {pair_v: 1, kdf, iter, salt, seal, pub} (pairing.gd)
 ##   POST /api/pair            {code, device, client} -> {token}  (401 tries_left / 429 retry_after / 423 paused)
+##        {pair_v: 1, salt, nonce, sealed, device, client} -> {pair_v: 1, ct, tag, phrase} (409 stale_salt: a new PIN)
 ##   GET  /api/status                                -> world list, AI mode
 ##   GET  /api/worlds                                -> the worlds this phone may play (the launcher's cards)
 ##   GET  /api/cover?slot=                           -> that world's cover picture (PNG)
@@ -79,7 +81,10 @@ func handle(req: Dictionary, ip: String) -> PackedByteArray:
 	var method := str(req.method)
 	if path == "/api/pairing":
 		var st: Dictionary = server.pairing.state_for(ip)
-		return HttpUtil.json_response(200, {"ok": true, "paused": bool(st.paused), "cooldown": int(st.cooldown), "always_ask": bool(st.always_ask)})
+		var state := {"ok": true, "paused": bool(st.paused), "cooldown": int(st.cooldown), "always_ask": bool(st.always_ask)}
+		if str(req.query.get("wrap", "")) == "1":
+			state.merge(server.pairing.wrap_info(), true)
+		return HttpUtil.json_response(200, state)
 	if path == "/api/report":
 		# A phone's Connection Test or the game's start-up diagnostics: no key needed (strict limits in ReportSink).
 		var body: PackedByteArray = req.body if method == "POST" else ReportSink.decode_get(str(req.query.get("r", "")))
@@ -91,16 +96,18 @@ func handle(req: Dictionary, ip: String) -> PackedByteArray:
 		if method != "POST":
 			return HttpUtil.error_response(405, "use POST")
 		var body := _json(req)
-		var r: Dictionary = server.pairing.pair(str(body.get("code", "")), str(body.get("device", "")), ip, str(req.headers.get("host", "")), str(body.get("client", "")))
+		var r: Dictionary = server.pairing.pair(str(body.get("code", "")), str(body.get("device", "")), ip, str(req.headers.get("host", "")), str(body.get("client", "")), body)
 		if not r.ok:
 			var extra := {}
-			for k in ["retry_after", "tries_left"]:
+			for k in ["retry_after", "tries_left", "stale_salt"]:
 				if r.has(k):
 					extra[k] = r[k]
 			server.pairing_changed()
 			return HttpUtil.json_response(int(r.status), {"ok": false, "error": str(r.error)}.merged(extra))
 		server.mark_active()
-		server.paired_device(str(body.get("device", "")), ip)
+		server.paired_device(str(body.get("device", "")), ip, str(r.get("phrase", "")))
+		if r.has("ct"):   # pair_v:1: the token only ever leaves the PC encrypted
+			return HttpUtil.json_response(200, {"ok": true, "pair_v": r.pair_v, "ct": r.ct, "tag": r.tag, "phrase": r.phrase, "device_id": r.device_id})
 		return HttpUtil.json_response(200, {"ok": true, "token": r.token, "device_id": r.device_id})
 	var device: Dictionary = server.pairing.check_token(HttpUtil.bearer(req.headers))
 	if device.is_empty():

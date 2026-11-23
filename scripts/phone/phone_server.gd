@@ -82,6 +82,9 @@ var serve_result: Dictionary = {}   # {ok, error, consent_url, funnel}
 var last_error := ""
 var last_contact: Dictionary = {}   # the last request from a phone: {t, ip, via, path, host}
 var phone_session: Dictionary = {}  # the world the phone last opened: {device, slot, name, t}
+var last_pair_phrase := ""          # pair_v:1 words for the person to compare on both screens
+var last_pair_device := ""
+var last_pair_legacy := false       # the last pairing was an older phone's (no check words)
 var started_at := 0.0
 
 var _page_info: Dictionary = {}
@@ -193,6 +196,9 @@ func start(listen_port: int = DEFAULT_PORT, bind_address: String = "") -> String
 	last_active = started_at
 	last_contact = {}
 	phone_session = {}
+	last_pair_phrase = ""
+	last_pair_device = ""
+	last_pair_legacy = false
 	_contact_ips = {}
 	_seen_requests = 0
 	pairing.new_code()   # a PIN is ready the moment it's on
@@ -358,6 +364,7 @@ func _switch_off() -> void:
 	http.stop()
 	serve_result = {}
 	pairing.cancel_code()
+	pairing.forget_wrap_key()
 	pairing.audit("server_stopped")
 	_apply_keep_awake()
 	state_changed.emit()
@@ -404,9 +411,13 @@ func mark_active() -> void:
 	last_active = Time.get_unix_time_from_system()
 
 
-## A phone paired (called by the API): the PIN has already changed.
-func paired_device(device_name: String, _ip: String) -> void:
-	phone_paired.emit(device_name if device_name != "" else "My phone")
+## A phone paired (called by the API): the PIN has already changed. `phrase`: the pair_v:1 check
+## words ("" when an older phone paired the old way, its key unencrypted on the network).
+func paired_device(device_name: String, _ip: String, phrase: String = "") -> void:
+	last_pair_phrase = phrase
+	last_pair_device = device_name if device_name != "" else "My phone"
+	last_pair_legacy = phrase == ""
+	phone_paired.emit(last_pair_device)
 	state_changed.emit()
 
 
