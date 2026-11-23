@@ -19,6 +19,25 @@ const BACKUPS := "phone_backups"
 const CHUNK_MAX := 8 * 1024 * 1024                    # (the client sends 4 MB; the server reads up to 16 MB)
 const MAX_TOTAL := SlotArchive.MAX_BUNDLE_BYTES       # the biggest world a bundle may hold
 const INCOMING := ".incoming"
+const PART_MAX_AGE_S := 24.0 * 3600.0
+
+
+## Abandoned chunks are not part of a world or a report. Collect them after a
+## day, both when Phone Link starts and whenever another chunk arrives.
+static func sweep(root: String, now_s: float = -1.0) -> int:
+	var inbox := folder(root).path_join(INCOMING)
+	if not DirAccess.dir_exists_absolute(inbox):
+		return 0
+	var now := Time.get_unix_time_from_system() if now_s < 0.0 else now_s
+	var removed := 0
+	for name in DirAccess.get_files_at(inbox):
+		if not str(name).ends_with(".part"):
+			continue
+		var path := inbox.path_join(str(name))
+		var modified := FileAccess.get_modified_time(path)
+		if modified > 0 and now - float(modified) > PART_MAX_AGE_S and DirAccess.remove_absolute(path) == OK:
+			removed += 1
+	return removed
 
 
 ## A plain file name a phone may send ("" when it isn't one).
@@ -43,6 +62,7 @@ static func destination(root: String, name: String, slot: String) -> String:
 
 ## One chunk. Returns [http status, response dictionary].
 static func receive(root: String, device_id: String, query: Dictionary, body: PackedByteArray) -> Array:
+	sweep(root)
 	var name := clean_name(str(query.get("name", "")))
 	var total := str(query.get("total", "")).to_int()
 	var offset := str(query.get("offset", "")).to_int()

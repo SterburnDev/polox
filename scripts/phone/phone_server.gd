@@ -37,6 +37,7 @@ const ReportSink := preload("res://scripts/net/report_sink.gd")
 const Announcer := preload("res://scripts/phone/announcer.gd")
 const AppPage := preload("res://scripts/phone/app_page.gd")
 const AndroidApp := preload("res://scripts/phone/android_app.gd")
+const ExportInbox := preload("res://scripts/phone/export_inbox.gd")
 
 ## A fixed, browser-safe port (Chrome refuses some ports with ERR_UNSAFE_PORT,
 ## so never a random one), remembered; if it's taken, the next one on this list.
@@ -180,6 +181,7 @@ func start(listen_port: int = DEFAULT_PORT, bind_address: String = "") -> String
 	if err != "":
 		last_error = err
 		return err
+	ExportInbox.sweep(root)
 	if engine_in_use != "bundled" and http.port > 0:
 		port = http.port
 	_routes_text = NetRules.system_routes_text()

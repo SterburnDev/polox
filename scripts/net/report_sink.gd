@@ -213,7 +213,8 @@ static func summary(rep: Dictionary) -> String:
 			elif str(r.get("level", "")) != "warn":
 				bad.append("%s: %s" % [clean_text(r.get("name", r.get("id", "?")), 40), clean_text(r.get("detail", ""), 90)])
 	var when := str(rep.get("received", "")).substr(11, 5)
-	var head := "%s from %s (%s, %s)" % [when, str(rep.get("from_ip", "?")), _via_label(str(rep.get("via", ""))), str(rep.get("address", "?"))]
+	var warning := "⚠ " if str(rep.get("transport", "")) == "get" else ""
+	var head := "%s%s from %s (%s, %s)" % [warning, when, str(rep.get("from_ip", "?")), _via_label(str(rep.get("via", ""))), str(rep.get("address", "?"))]
 	if bad.is_empty():
 		return "%s: all %d checks OK" % [head, ok]
 	return "%s: %d OK, %d problem%s: %s" % [head, ok, bad.size(), "" if bad.size() == 1 else "s", "; ".join(bad)]
