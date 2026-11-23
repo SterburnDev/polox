@@ -316,7 +316,11 @@ async function sendPin() {
   store.set("polox_name", $("name").value);
   try {
     // Asked again now: the salt belongs to the PIN on the PC's screen, which may have changed since.
-    try { pairCap = await (await api("/api/pairing?wrap=1")).json(); } catch (e) {}
+    // No answer is an error, never a reason to send the PIN the old way.
+    let cap = null;
+    try { cap = await (await api("/api/pairing?wrap=1")).json(); } catch (e) { cap = null; }
+    if (!cap || typeof cap !== "object") { $("pinmsg").textContent = "Couldn't reach your PC. Is Phone Link still on?"; sending = false; return; }
+    pairCap = cap;
     const body = { device: $("name").value, client: clientId() };
     let wrap = null;
     if (pairCan(pairCap)) {
