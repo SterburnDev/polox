@@ -20,6 +20,7 @@ var _qr_for := ""
 var _t := 0.0
 var _printed_pin := ""
 var _printed_url := ""
+var _words: Label
 
 
 func setup(srv: Node) -> void:
@@ -53,6 +54,8 @@ func setup(srv: Node) -> void:
 	v.add_child(_unlock)
 	_status = UiKit.para("", 18, ThemeBuilder.CREAM)
 	v.add_child(_status)
+	_words = UiKit.para("", 18, ThemeBuilder.YELLOW)
+	v.add_child(_words)
 	v.add_child(UiKit.para("Keep this window open while you play on the phone. Close it to switch Phone Link off.", 14, ThemeBuilder.MUTED))
 	server.state_changed.connect(refresh)
 	refresh()
@@ -88,7 +91,19 @@ func refresh() -> void:
 		_status.text = "📱 Phone connected (%s)" % (str(lc.get("via", "")) if str(lc.get("via", "")) != "" else str(lc.ip))
 	else:
 		_status.text = "○ Waiting for your phone..."
+	_words.text = words_text()
+	_words.visible = _words.text != ""
 	_print_changes(url)
+
+
+## After a pairing: the check words (or that an older phone paired without them).
+func words_text() -> String:
+	var phrase := str(server.get("last_pair_phrase")) if server.get("last_pair_phrase") != null else ""
+	if phrase != "":
+		return "Check these words match your phone: " + phrase
+	if server.get("last_pair_legacy") == true and str(server.get("last_pair_device")) != "":
+		return "⚠ %s paired the old way (no check words): update Polox on it." % str(server.get("last_pair_device"))
+	return ""
 
 
 func _tick() -> void:

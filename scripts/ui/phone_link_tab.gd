@@ -319,6 +319,13 @@ func _pin(srv: Node, col: VBoxContainer) -> void:
 func _status(srv: Node) -> void:
 	_contact_label = UiKit.para("", 18, ThemeBuilder.CREAM)
 	_v.add_child(_contact_label)
+	if str(srv.last_pair_phrase) != "":
+		var pair := _card(ThemeBuilder.YELLOW)
+		pair.add_child(UiKit.label("Check these words match your phone", 20, ThemeBuilder.YELLOW))
+		pair.add_child(UiKit.label(str(srv.last_pair_phrase), 30, ThemeBuilder.CREAM))
+		pair.add_child(UiKit.para("%s just paired. If its words are different, forget it below and pair again." % str(srv.last_pair_device), 16, ThemeBuilder.MUTED))
+	elif bool(srv.last_pair_legacy) and str(srv.last_pair_device) != "":
+		_v.add_child(UiKit.para("⚠ %s paired the old way: its key crossed the network unencrypted. Update Polox on that phone, forget it below and pair again." % str(srv.last_pair_device), 16, ThemeBuilder.DANGER))
 	var reports: Array = ReportSink.load_saved(SaveManager.root, 1)
 	if not reports.is_empty():
 		_v.add_child(UiKit.para("Last phone report: " + ReportSink.summary(reports[0]), 16, ThemeBuilder.MUTED))

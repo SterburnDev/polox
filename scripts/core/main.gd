@@ -620,10 +620,14 @@ func _on_phone_reached(contact: Dictionary) -> void:
 
 
 func _on_phone_paired(device_name: String) -> void:
+	var phrase := str(phone_link.last_pair_phrase)
 	if host_mode:
-		print("[host] Paired: %s" % device_name)
+		print("[host] Paired: %s%s" % [device_name, ("  (check words: %s)" % phrase) if phrase != "" else "  (an older phone: no check words)"])
 		return
-	show_phone_banner("📱 Paired: %s" % device_name, "")
+	if phrase != "":
+		show_phone_banner("📱 Paired: %s" % device_name, "Check these words match your phone: " + phrase)
+	else:
+		show_phone_banner("📱 Paired: %s" % device_name)
 
 
 func show_phone_banner(text: String, hint: String = "Click to open Phone Link") -> void:
