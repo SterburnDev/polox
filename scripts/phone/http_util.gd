@@ -171,7 +171,8 @@ static func bearer(headers: Dictionary) -> String:
 static func sha256_bytes(b: PackedByteArray) -> String:
 	var ctx := HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
-	ctx.update(b)
+	if not b.is_empty():   # (update() refuses an empty buffer with an engine error; the hash of nothing is the same)
+		ctx.update(b)
 	return ctx.finish().hex_encode()
 
 

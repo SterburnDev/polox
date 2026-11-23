@@ -637,13 +637,13 @@ static func is_pc_itself(req: Dictionary) -> bool:
 
 
 ## /hello.json in full: a request from this PC itself (not through Tailscale Serve or the bundled
-## server, which both arrive from 127.0.0.1 too), or one that carries a paired phone's key.
+## server, which both arrive from 127.0.0.1 too), or one a paired phone signed (or sent its old-way key with).
 func hello_in_full(req: Dictionary) -> bool:
 	var headers: Dictionary = req.get("headers", {})
 	var forwarded := headers.has("x-forwarded-for") or headers.has("tailscale-user-login") or bool(req.get("proxied", false))
 	if NetRules.kind(str(req.get("ip", ""))) == "loopback" and not forwarded:
 		return true
-	return pairing != null and pairing.token_is_valid(HttpUtil.bearer(headers))
+	return pairing != null and pairing.request_is_paired(req)
 
 
 func _page(req: Dictionary) -> Variant:

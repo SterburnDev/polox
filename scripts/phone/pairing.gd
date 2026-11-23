@@ -29,6 +29,8 @@ extends RefCounted
 
 const HttpUtil := preload("res://scripts/phone/http_util.gd")
 const PairingStore := preload("res://scripts/phone/pairing_store.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
+const SIG_NONCES_MAX := 50000       # signed requests remembered at once (10 minutes' worth)
 
 const PIN_LIFETIME_S := 600.0
 const WRONG_PER_ADDRESS := 5        # then a cooldown for that address
@@ -82,6 +84,8 @@ var _wrong_updated: Dictionary = {} # ip -> last wrong try (for pruning _wrong)
 var _cooldown: Dictionary = {}      # ip -> unix time the cooldown ends
 var _wrong_times: Array = []        # unix times of every wrong PIN (the hourly limit)
 var _replace_id := ""               # "Rotate": the next pairing replaces this device
+var _sig_nonces: Dictionary = {}    # signed requests' nonces -> unix time they may be forgotten (replays)
+var _sig_nonces_pruned := 0.0
 var _mutex := Mutex.new()
 
 
@@ -197,7 +201,7 @@ func wrap_info() -> Dictionary:
 	var info := {}
 	if wrap_supported() and _ensure_seal_key_locked():
 		info = {"pair_v": PAIR_WRAP_VERSION, "kdf": PAIR_WRAP_KDF, "iter": PAIR_WRAP_ITER, "salt": _wrap_salt,
-			"seal": PAIR_WRAP_SEAL, "pub": _seal_pub}
+			"seal": PAIR_WRAP_SEAL, "pub": _seal_pub, "sig": RequestSig.VERSION, "now": int(Time.get_unix_time_from_system())}
 	_mutex.unlock()
 	return info
 
@@ -408,6 +412,8 @@ func _register_device_locked(given_pin: String, device_name: String, ip: String,
 	}
 	if always_ask:
 		device_entry["expires"] = now_s + SESSION_TOKEN_LIFETIME_S
+	if wrapped:
+		device_entry["sig"] = true   # it signs every request (request_sig.gd): its key alone never opens anything
 	active_devices.append(device_entry)
 	# Commit first so a failed write leaves the same PIN available for a retry.
 	if not _save_devices(active_devices):
@@ -732,14 +738,67 @@ static func open_answer(answer: Dictionary, pin: String, opener: Dictionary) -> 
 
 # --- Tokens -----------------------------------------------------------------------------------
 
-## check_token for the server thread (/hello.json): only says whether the key is a paired one.
-func token_is_valid(token: String) -> bool:
-	if token.length() != TOKEN_BYTES * 2:
-		return false
+## [PAIRING] Who sent this request (the parsed request: method, path, query, headers, body). Safe on
+## the server thread too. {device} for a good Polox-Sig signature, or for a bearer key of a phone that
+## paired the old way; {clock: true, now} when a signature's time is too far from the PC's; {replayed: true}
+## for a nonce seen before; {} otherwise. A phone that paired with pair_v:1 signs: its bare key is refused.
+func authenticate(req: Dictionary) -> Dictionary:
+	var headers: Dictionary = req.get("headers", {})
+	var auth := str(headers.get("authorization", ""))
 	_mutex.lock()
-	var found := not check_token(token).is_empty()
+	var result := {}
+	if auth.to_lower().begins_with(RequestSig.SCHEME.to_lower() + " "):
+		result = _check_signature_locked(req, auth)
+	else:
+		var device := check_token(HttpUtil.bearer(headers))
+		if not device.is_empty() and bool(device.get("sig", false)):
+			audit("bearer_refused device=%s" % str(device.get("id", "")))
+		elif not device.is_empty():
+			result = {"device": device}
 	_mutex.unlock()
-	return found
+	return result
+
+
+func _check_signature_locked(req: Dictionary, auth: String) -> Dictionary:
+	var fields := RequestSig.parse(auth)
+	if fields.is_empty():
+		return {}
+	var now_s := Time.get_unix_time_from_system()
+	if absf(float(fields.ts) - now_s) > RequestSig.WINDOW_S:
+		return {"clock": true, "now": int(now_s)}
+	var body: PackedByteArray = req.get("body", PackedByteArray())
+	var signed_target := RequestSig.canonical(str(req.get("path", "")), req.get("query", {}))
+	var body_sha := HttpUtil.sha256_bytes(body)
+	var found := {}
+	for device: Dictionary in devices():   # every one, whichever matches: the same work for any request
+		var expected := RequestSig.sign_with_hash(str(device.get("token_sha256", "")), str(req.get("method", "")), signed_target, int(fields.ts), str(fields.nonce), body_sha)
+		if expected != "" and HttpUtil.constant_time_equals(expected, str(fields.sig)):
+			found = device
+	if found.is_empty():
+		return {}
+	_prune_nonces_locked(now_s)
+	if _sig_nonces.has(fields.nonce):
+		audit("sig_replayed device=%s" % str(found.get("id", "")))
+		return {"replayed": true}
+	if _sig_nonces.size() >= SIG_NONCES_MAX:
+		audit("sig_busy nonces=%d" % _sig_nonces.size())
+		return {"busy": true}
+	_sig_nonces[fields.nonce] = now_s + RequestSig.WINDOW_S * 2.0   # outlives every time the window accepts
+	return {"device": found}
+
+
+func _prune_nonces_locked(now_s: float) -> void:
+	if now_s - _sig_nonces_pruned < 30.0 and _sig_nonces.size() < SIG_NONCES_MAX:
+		return
+	_sig_nonces_pruned = now_s
+	for nonce: String in _sig_nonces.keys():
+		if float(_sig_nonces[nonce]) < now_s:
+			_sig_nonces.erase(nonce)
+
+
+## authenticate() for the server thread's /hello.json: only whether a paired phone sent it.
+func request_is_paired(req: Dictionary) -> bool:
+	return authenticate(req).has("device")
 
 
 ## The device a bearer token belongs to ({} if none). Compares hashes in constant time.

@@ -8,6 +8,8 @@ extends RefCounted
 ##        ?wrap=1                                    -> + {pair_v: 1, kdf, iter, salt, seal, pub} (pairing.gd)
 ##   POST /api/pair            {code, device, client} -> {token}  (401 tries_left / 429 retry_after / 423 paused)
 ##        {pair_v: 1, salt, nonce, sealed, device, client} -> {pair_v: 1, ct, tag, phrase} (409 stale_salt: a new PIN)
+##   Everything below: "Authorization: Polox-Sig ..." (request_sig.gd; a pair_v:1 phone must sign) or
+##   "Authorization: Bearer <token>" (phones that paired the old way). 401 {clock, now}: the phone's time is off.
 ##   GET  /api/status                                -> world list, AI mode
 ##   GET  /api/worlds                                -> the worlds this phone may play (the launcher's cards)
 ##   GET  /api/cover?slot=                           -> that world's cover picture (PNG)
@@ -109,10 +111,15 @@ func handle(req: Dictionary, ip: String) -> PackedByteArray:
 		if r.has("ct"):   # pair_v:1: the token only ever leaves the PC encrypted
 			return HttpUtil.json_response(200, {"ok": true, "pair_v": r.pair_v, "ct": r.ct, "tag": r.tag, "phrase": r.phrase, "device_id": r.device_id})
 		return HttpUtil.json_response(200, {"ok": true, "token": r.token, "device_id": r.device_id})
-	var device: Dictionary = server.pairing.check_token(HttpUtil.bearer(req.headers))
-	if device.is_empty():
+	var auth: Dictionary = server.pairing.authenticate(req)
+	if auth.has("clock"):   # a good-looking signature with a time far from the PC's: the phone corrects and retries
+		return HttpUtil.json_response(401, {"ok": false, "error": "clock", "clock": true, "now": int(auth.now)})
+	if auth.has("busy"):
+		return HttpUtil.error_response(503, "too many requests at once: try again in a moment")
+	if not auth.has("device"):
 		server.pairing.audit("auth_failed path=%s ip=%s" % [path, ip])
 		return HttpUtil.error_response(401, "not paired")
+	var device: Dictionary = auth.device
 	server.mark_active()
 	authed[ip] = str(device.get("name", "My phone"))
 	if Time.get_unix_time_from_system() - _last_touch > 60.0:
