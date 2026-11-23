@@ -207,9 +207,11 @@ or chats.
   (what finding the PC needs); the addresses and the rest go to this PC itself and to paired phones.
 - Pairing (pair_v:1): the phone seals the PIN with the PC's RSA-2048 key for this session (made when a
   phone first asks, kept only in memory, gone when Phone Link stops); the PC sends the phone's key back
-  encrypted and authenticated, and both screens show three check words. Older apps and browsers without
-  BigInt still pair the old way (PIN and key readable on the Wi-Fi); the PC says so. On Same Wi-Fi every
-  later request still carries the key in a plain-HTTP header (see SECURITY.md, Known limits).
+  encrypted and authenticated, and both screens show three check words. After that the phone never sends
+  its key again: each request carries a signature made with it (good once, within 5 minutes of the PC's
+  clock), and the PC refuses that phone's bare key. Older apps and browsers without BigInt still pair the
+  old way (PIN and key readable on the Wi-Fi, the key sent with every request); the PC says so. What is
+  synced still travels unencrypted on Same Wi-Fi (see SECURITY.md, Known limits).
 - The PIN is never written to a log or put in an address. Paths are
   checked against a list; `..` tricks, folders and listings are refused; other web pages can't read
   anything (no CORS). `PersonalData\phone\audit.log` lists pairings and refusals;
