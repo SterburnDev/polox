@@ -123,6 +123,11 @@ func test_phone_size_browser_launcher_pin_worlds_and_play() -> void:
 	# The PIN from the PC: typing the 6th digit sends it.
 	var pin_before: String = srv.pairing.code
 	await _type(cdp, "#pin", pin_before)
+	# pair_v:1: the check words come first, and the key is only kept once they're confirmed.
+	var words: Variant = await _wait_js(cdp, "document.getElementById('s-verify').classList.contains('hide') ? '' : document.getElementById('words').textContent", 20.0)
+	eq(str(words), str(srv.last_pair_phrase), "the phone shows the PC's check words")
+	eq(int(await cdp.eval_js("(localStorage.getItem('polox_token') || '').length")), 0, "no key kept before the words are confirmed")
+	await cdp.eval_js("document.getElementById('vyes').click(); 1")
 	var worlds: Variant = await _wait_js(cdp, "document.querySelectorAll('.world').length", 15.0)
 	check(int(worlds) >= 1, "the right PIN shows the worlds (%s)" % str(worlds))
 	eq(int(await cdp.eval_js("(localStorage.getItem('polox_token') || '').length")), 64, "the phone keeps its 64-character key")
@@ -178,6 +183,126 @@ func test_phone_size_browser_launcher_pin_worlds_and_play() -> void:
 	if not errs.is_empty():
 		print("    console: ", "\n    ".join(cdp.console_all.slice(maxi(0, cdp.console_all.size() - 30))))
 	print("    screenshots: %s, %s, %s" % [root.path_join("launcher_pin.png"), root.path_join("launcher_worlds.png"), root.path_join("phone_game.png")])
+	cdp.close()
+	srv.stop()
+	srv.queue_free()
+	await frames(2)
+
+
+## [PAIRING] pair_v:1 in a real browser engine at phone size over plain HTTP (no crypto.subtle there):
+## DevTools' own network capture (CDP Network) of the whole pairing holds neither the PIN nor the key;
+## one character changed in the PC's answer on the way (CDP Fetch) ends at "Response didn't verify"
+## with nothing kept; then a clean pairing shows the PC's words and keeps the key only after "They
+## match". Needs no game build. Writes the capture to <scratch>/pair_capture.json.
+func test_phone_browser_pairs_without_the_key_on_the_wire() -> void:
+	var browser := Cdp.find_browser()
+	if browser == "":
+		print("    SKIPPED: neither Edge nor Chrome is installed")
+		return
+	var root := fresh_save_root("e2e_pair_wrap")
+	StarterContent.create_world("Wire World", "Sam")
+	GameState.load_world()
+	var web := root.path_join("_web")
+	JsonUtil.ensure_dir(web)
+	var srv: Node = PhoneServer.new()
+	tree.root.add_child(srv)
+	srv.setup(root, web)
+	srv.mode = PhoneServer.auto_mode({})
+	listen_on_free_port(func(p: int) -> String: return srv.start(p), "Phone Link (Same Wi-Fi)", "*")
+	var base: String = srv.lan_url()
+	if not check(base != "", "this PC has a home-network address"):
+		srv.stop()
+		srv.queue_free()
+		return
+	var cdp := Cdp.new(tree)
+	if not check(await cdp.launch(browser, root.path_join("_browser_profile")), "headless browser started"):
+		cdp.close()
+		srv.stop()
+		srv.queue_free()
+		return
+	await cdp.send("Emulation.setDeviceMetricsOverride", {"width": 390, "height": 844, "deviceScaleFactor": 2, "mobile": true})
+	await cdp.send("Emulation.setUserAgentOverride", {"userAgent": PHONE_UA, "platform": "Android"})
+	await cdp.send("Network.enable", {"maxPostDataSize": 65536})
+	await cdp.send("Fetch.enable", {"patterns": [{"urlPattern": "*/api/pair", "requestStage": "Response"}]})
+	await cdp.navigate(base + "/")
+	check(await _wait_js(cdp, "!document.getElementById('s-pin').classList.contains('hide')", 10.0) == true, "the launcher asks for the PIN")
+	eq(await cdp.eval_js("window.isSecureContext"), false, "plain HTTP, like a phone on the Wi-Fi")
+	eq(await cdp.eval_js("typeof (window.crypto && window.crypto.subtle)"), "undefined", "so no crypto.subtle: the page's own JavaScript does the work")
+	# 1. Someone on the way changes one character of the PC's answer.
+	var pin1: String = srv.pairing.code
+	var mark := cdp.events.size()
+	await _type(cdp, "#pin", pin1)
+	var at := await cdp.wait_event("Fetch.requestPaused", mark, 20.0)
+	if check(at >= 0, "the answer to POST /api/pair was caught on the way"):
+		var paused: Dictionary = cdp.events[at].params
+		var got := await cdp.send("Fetch.getResponseBody", {"requestId": paused.requestId})
+		var text := Marshalls.base64_to_utf8(str(got.get("body", ""))) if bool(got.get("base64Encoded", false)) else str(got.get("body", ""))
+		var j: Variant = JSON.parse_string(text)
+		check(j is Dictionary and j.has("tag") and not j.has("token"), "the PC's answer is wrapped: %s" % text.left(60))
+		if j is Dictionary and j.has("tag"):
+			j.tag = ("1" if str(j.tag)[0] == "0" else "0") + str(j.tag).substr(1)
+		await cdp.send("Fetch.fulfillRequest", {"requestId": paused.requestId, "responseCode": int(paused.get("responseStatusCode", 200)),
+			"responseHeaders": paused.get("responseHeaders", []), "body": Marshalls.utf8_to_base64(JSON.stringify(j))})
+	var msg: Variant = await _wait_js(cdp, "(document.getElementById('pinmsg').textContent.indexOf('verify') >= 0) ? document.getElementById('pinmsg').textContent : ''", 20.0)
+	check(str(msg).contains("Response didn't verify: possible interference"), "a changed answer: %s" % str(msg))
+	eq(int(await cdp.eval_js("(localStorage.getItem('polox_token') || '').length")), 0, "and nothing was kept")
+	check(str(await cdp.eval_js("document.getElementById('s-verify').className")).contains("hide"), "no check words for a changed answer")
+	await cdp.screenshot(root.path_join("launcher_interference.png"))
+	for d in srv.pairing.devices():   # what the person does on the PC: forget the phone they don't trust
+		srv.pairing.unpair(str(d.id))
+	await cdp.send("Fetch.disable")
+	# 2. A clean pairing.
+	var pin2: String = srv.pairing.code
+	check(pin2 != pin1, "the PC shows a new PIN")
+	mark = cdp.events.size()
+	await _type(cdp, "#pin", pin2)
+	var words: Variant = await _wait_js(cdp, "document.getElementById('s-verify').classList.contains('hide') ? '' : document.getElementById('words').textContent", 20.0)
+	check(str(words).split(" ").size() == 3, "three check words: %s" % str(words))
+	eq(str(words), str(srv.last_pair_phrase), "the same words as the PC's Phone Link screen")
+	eq(int(await cdp.eval_js("(localStorage.getItem('polox_token') || '').length")), 0, "no key kept before they're confirmed")
+	await cdp.screenshot(root.path_join("launcher_words.png"))
+	await cdp.eval_js("document.getElementById('vyes').click(); 1")
+	var cards: Variant = await _wait_js(cdp, "document.querySelectorAll('.world').length", 15.0)
+	check(int(cards) >= 1, "They match: the worlds")
+	var token := str(await cdp.eval_js("localStorage.getItem('polox_token') || ''"))
+	eq(token.length(), 64, "the key is kept now")
+	check(not srv.pairing.check_token(token).is_empty(), "and it is the one the PC stored")
+	# DevTools' network capture: every request (address, headers, body) and every answer (headers, body).
+	await tree.create_timer(0.5).timeout
+	cdp.pump()
+	var capture: Array = []
+	var by_id := {}
+	for e in cdp.events.slice(mark):
+		var p: Dictionary = e.params
+		if str(e.method) == "Network.requestWillBeSent":
+			var r := {"url": str(p.request.url), "method": str(p.request.method), "request_headers": p.request.get("headers", {}), "post": str(p.request.get("postData", ""))}
+			by_id[str(p.requestId)] = r
+			capture.append(r)
+		elif str(e.method) == "Network.responseReceived" and by_id.has(str(p.requestId)):
+			by_id[str(p.requestId)]["status"] = int(p.response.status)
+			by_id[str(p.requestId)]["response_headers"] = p.response.get("headers", {})
+	for id in by_id:
+		var b := await cdp.send("Network.getResponseBody", {"requestId": id})
+		by_id[id]["body"] = Marshalls.base64_to_utf8(str(b.get("body", ""))) if bool(b.get("base64Encoded", false)) else str(b.get("body", ""))
+	var pairing_part := capture.filter(func(r): return str(r.url).contains("/api/pairing") or str(r.url).contains("/api/pair"))
+	check(pairing_part.size() >= 2, "the capture has the pairing (%d requests)" % pairing_part.size())
+	var post := pairing_part.filter(func(r): return str(r.method) == "POST")
+	var sent: Variant = JSON.parse_string(str(post[0].post)) if not post.is_empty() else null
+	var answer: Variant = JSON.parse_string(str(post[0].get("body", ""))) if not post.is_empty() else null
+	check(sent is Dictionary and int(sent.get("pair_v", 0)) == 1 and str(sent.get("sealed", "")).length() == 512 and not sent.has("code"), "out went pair_v:1 with a sealed PIN and no PIN field: %s" % [sent.keys() if sent is Dictionary else sent])
+	check(answer is Dictionary and str(answer.get("ct", "")).length() == 128 and not answer.has("token"), "back came the key encrypted, no token field: %s" % [answer.keys() if answer is Dictionary else answer])
+	for r in pairing_part:
+		var raw := str(r.url) + JSON.stringify(r.get("request_headers", {})) + str(r.post) + JSON.stringify(r.get("response_headers", {})) + str(r.get("body", ""))
+		check(not raw.contains(token), "the key is nowhere in %s %s (address, headers, body, answer)" % [str(r.method), str(r.url).get_slice("/", 3)])
+		check(not str(r.url).contains(pin2) and not str(r.post).contains("\"" + pin2 + "\"") and not str(r.get("body", "")).contains("\"" + pin2 + "\""), "nor the PIN")
+	var later := capture.filter(func(r): return not r in pairing_part and JSON.stringify(r).contains(token))
+	print("    capture: %d requests; the key appears in none of the %d pairing ones; after pairing it rides in the Authorization header of %d (plain HTTP: SECURITY.md, known limits)" % [capture.size(), pairing_part.size(), later.size()])
+	for r in later:
+		check(JSON.stringify(r.get("request_headers", {})).contains(token) and not str(r.get("body", "")).contains(token), "later, only as a request header, never in an answer: %s" % str(r.url))
+	JsonUtil.write_json(root.path_join("pair_capture.json"), {"base": base, "token_sha256": srv.pairing.devices()[0].get("token_sha256", "") if not srv.pairing.devices().is_empty() else "", "requests": capture})
+	print("    capture file: %s; screenshots: %s, %s" % [root.path_join("pair_capture.json"), root.path_join("launcher_interference.png"), root.path_join("launcher_words.png")])
+	cdp.pump()
+	eq(Array(cdp.console_errors), [], "no console errors")
 	cdp.close()
 	srv.stop()
 	srv.queue_free()

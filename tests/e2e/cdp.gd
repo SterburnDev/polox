@@ -18,6 +18,7 @@ var debug_port := 0
 var ws := WebSocketPeer.new()
 var console_errors: PackedStringArray = []
 var console_all: PackedStringArray = []
+var events: Array = []          # Network.* and Fetch.* events (after Network.enable / Fetch.enable), oldest first
 var _id := 0
 var _replies := {}
 
@@ -150,6 +151,20 @@ func pump() -> void:
 			console_all.append("log %s: %s" % [e.get("level", ""), e.get("text", "")])
 			if str(e.get("level", "")) == "error":
 				console_errors.append("log: " + str(e.get("text", "")))
+		elif m.begins_with("Network.") or m.begins_with("Fetch."):
+			events.append({"method": m, "params": p})
+
+
+## Waits for the next event named `method` that arrived after `from` (an index into events): its index, or -1.
+func wait_event(method: String, from: int, timeout_s: float) -> int:
+	var t := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t < int(timeout_s * 1000.0):
+		pump()
+		for i in range(from, events.size()):
+			if str(events[i].method) == method:
+				return i
+		await tree.process_frame
+	return -1
 
 
 ## Evaluates JavaScript in the page; returns its value (awaiting promises).

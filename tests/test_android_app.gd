@@ -542,6 +542,9 @@ func test_app_mode_pairs_offers_updates_and_retries_while_the_pc_is_away() -> vo
 	var ok: Dictionary = await pm.pair_with(url, server.pairing.code, "Test phone")
 	check(ok.ok, "paired: %s" % ok)
 	check(pm.paired())
+	eq(int(ok.get("pair_v", 0)), 1, "pair_v:1: the PIN went sealed and the key came back encrypted")
+	check(str(ok.get("phrase", "")) != "" and str(ok.phrase) == str(server.last_pair_phrase), "the app's check words are the PC's: %s" % str(ok.get("phrase", "")))
+	check(str(server.pc_name()) in (pm.link.link.get("pair_v_pcs", []) as Array), "and it remembers that this PC pairs safely (no downgrade later)")
 	eq(pm.link.token().length(), 64, "the key is kept in the app's own folder")
 	check(not FileAccess.get_file_as_string(AppLink.link_file(phone_root)).is_empty())
 	eq(str(pm.client.only_slots), ",".join(Slots.phone_ids()), "it syncs every world the PC lets the phone play")
@@ -611,6 +614,9 @@ var link = null
 var connection := {}
 func paired() -> bool:
 	return false
+var unpaired := 0
+func unpair() -> void:
+	unpaired += 1
 func pair_with(url: String, pin: String, device_name: String, how: String = \"typed\") -> Dictionary:
 	calls.append([url, pin, device_name, how])
 	return {\"ok\": false, \"error\": \"wrong PIN (4 tries left)\"}
@@ -802,6 +808,9 @@ var connection := {}
 var update_offer := {}
 func paired() -> bool:
 	return false
+var unpaired := 0
+func unpair() -> void:
+	unpaired += 1
 func pair_with(url: String, pin: String, device_name: String, how: String = 'typed') -> Dictionary:
 	calls.append([url, pin, device_name, how])
 	return {'ok': false, 'error': 'wrong PIN (4 tries left)'}

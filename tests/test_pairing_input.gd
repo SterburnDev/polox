@@ -18,6 +18,9 @@ var link = null
 var connection := {}
 func paired() -> bool:
 	return false
+var unpaired := 0
+func unpair() -> void:
+	unpaired += 1
 func pair_with(url: String, pin: String, device_name: String, how: String = \"typed\") -> Dictionary:
 	calls.append(pin)
 	return {\"ok\": false, \"error\": \"wrong PIN (4 tries left)\"}
@@ -96,6 +99,59 @@ func test_fast_taps_leading_zero_and_retry() -> void:
 	eq(fake.calls.size(), 2, "and the retry pairs again")
 	eq(str(fake.calls[1]), "123456")
 	await _teardown()
+
+
+func test_the_app_shows_the_check_words_after_a_safe_pairing() -> void:
+	# A phone that paired with pair_v:1: the words come first; "They match" finishes, the other
+	# answer forgets the new key on both sides and asks for the PIN again.
+	var s := GDScript.new()
+	s.source_code = "extends Node
+var link = null
+var connection := {}
+var unpaired := 0
+func paired() -> bool:
+	return false
+func unpair() -> void:
+	unpaired += 1
+func pair_with(url: String, pin: String, device_name: String, how: String = \"typed\") -> Dictionary:
+	return {\"ok\": true, \"phrase\": \"honey flint jade\", \"pair_v\": 1}
+func connection_text() -> String:
+	return \"\"
+"
+	s.reload()
+	var phone: Node = s.new()
+	phone.link = preload("res://scripts/phone/app_link.gd").new()
+	phone.add_child(phone.link)
+	tree.root.add_child(phone)
+	for answer in ["They match", "They don't match"]:
+		var p: Control = AppConnectPanel.new()
+		tree.root.add_child(p)
+		p.setup_connect(null, phone, true)
+		p.target = {"url": "http://127.0.0.1:1", "path": "home", "name": "PC"}
+		p.show_step("pin")
+		p.pin = "123456"
+		await p.submit_pin()
+		await frames(2)
+		eq(p.step, "verify", "after pairing: the check words first")
+		eq(p.pair_phrase, "honey flint jade")
+		var texts := p.find_children("*", "Label", true, false).map(func(l): return (l as Label).text)
+		check("honey flint jade" in texts and "Check these words match your PC" in texts, "the words, big, with what to do: %s" % [texts])
+		var buttons := p.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == answer)
+		check(buttons.size() == 1, "a %s button" % answer)
+		if buttons.size() == 1:
+			(buttons[0] as Button).pressed.emit()
+		await frames(3)
+		if answer == "They match":
+			eq(p.step, "done", "They match: connected")
+			eq(phone.unpaired, 0, "and the key stays")
+		else:
+			eq(p.step, "pin", "They don't match: back to the PIN")
+			eq(phone.unpaired, 1, "and the new key is forgotten (on the PC too)")
+			check(p._msg.text.contains("didn't match"), "saying why: " + p._msg.text)
+		p.queue_free()
+		await frames(1)
+	phone.queue_free()
+	await frames(1)
 
 
 func test_keyboard_and_paste_still_work() -> void:
