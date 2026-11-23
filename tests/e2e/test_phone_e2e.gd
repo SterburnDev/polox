@@ -16,6 +16,7 @@ const HttpUtil := preload("res://scripts/phone/http_util.gd")
 const Probe := preload("res://tests/http_probe.gd")
 const StarterContent := preload("res://scripts/core/starter_content.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 var srv: Node
 var port := 0
@@ -119,7 +120,9 @@ func test_pair_sync_conflict_and_ai_on_every_address() -> void:
 		if not paired.ok:
 			phone.queue_free()
 			continue
-		eq(int((await probe.request(a, port, Probe.get_req("/api/status", {"Authorization": "Bearer " + str(paired.token)}))).code), 200, "%s: the key opens the API" % a)
+		var signed := RequestSig.header(str(paired.token), "GET", "/api/status").trim_prefix("Authorization: ")
+		eq(int((await probe.request(a, port, Probe.get_req("/api/status", {"Authorization": signed}))).code), 200, "%s: a request signed with the key opens the API" % a)
+		eq(int((await probe.request(a, port, Probe.get_req("/api/status", {"Authorization": "Bearer " + str(paired.token)}))).code), 401, "%s: the bare key of a phone that signs doesn't" % a)
 		eq(int((await probe.request(a, port, Probe.get_req("/api/status"))).code), 401, "%s: no key: 401" % a)
 		eq(int((await probe.request(a, port, Probe.get_req("/api/status", {"Authorization": "Bearer " + "0".repeat(64)}))).code), 401, "%s: wrong key: 401" % a)
 		# First sync: the phone gets everything, byte for byte (PNGs included).

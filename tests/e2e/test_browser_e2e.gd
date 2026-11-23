@@ -295,10 +295,14 @@ func test_phone_browser_pairs_without_the_key_on_the_wire() -> void:
 		var raw := str(r.url) + JSON.stringify(r.get("request_headers", {})) + str(r.post) + JSON.stringify(r.get("response_headers", {})) + str(r.get("body", ""))
 		check(not raw.contains(token), "the key is nowhere in %s %s (address, headers, body, answer)" % [str(r.method), str(r.url).get_slice("/", 3)])
 		check(not str(r.url).contains(pin2) and not str(r.post).contains("\"" + pin2 + "\"") and not str(r.get("body", "")).contains("\"" + pin2 + "\""), "nor the PIN")
-	var later := capture.filter(func(r): return not r in pairing_part and JSON.stringify(r).contains(token))
-	print("    capture: %d requests; the key appears in none of the %d pairing ones; after pairing it rides in the Authorization header of %d (plain HTTP: SECURITY.md, known limits)" % [capture.size(), pairing_part.size(), later.size()])
-	for r in later:
-		check(JSON.stringify(r.get("request_headers", {})).contains(token) and not str(r.get("body", "")).contains(token), "later, only as a request header, never in an answer: %s" % str(r.url))
+	# After pairing the page signs every request (request_sig.gd): the key itself never travels again.
+	var leaked := capture.filter(func(r): return JSON.stringify(r).contains(token))
+	var after := capture.filter(func(r): return not r in pairing_part)
+	var signed := after.filter(func(r): return str((r.get("request_headers", {}) as Dictionary).get("Authorization", "")).begins_with("Polox-Sig v=1,"))
+	print("    capture: %d requests; the key appears in %d of them; %d of the %d after pairing are signed" % [capture.size(), leaked.size(), signed.size(), after.size()])
+	eq(leaked.size(), 0, "the key appears nowhere in the capture (addresses, headers, bodies, answers)")
+	check(not after.is_empty() and signed.size() == after.size(), "every request after pairing carries a Polox-Sig signature")
+	check(not JSON.stringify(capture).contains("Bearer"), "and none carries a Bearer key")
 	JsonUtil.write_json(root.path_join("pair_capture.json"), {"base": base, "token_sha256": srv.pairing.devices()[0].get("token_sha256", "") if not srv.pairing.devices().is_empty() else "", "requests": capture})
 	print("    capture file: %s; screenshots: %s, %s" % [root.path_join("pair_capture.json"), root.path_join("launcher_interference.png"), root.path_join("launcher_words.png")])
 	cdp.pump()

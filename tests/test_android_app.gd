@@ -545,6 +545,7 @@ func test_app_mode_pairs_offers_updates_and_retries_while_the_pc_is_away() -> vo
 	eq(int(ok.get("pair_v", 0)), 1, "pair_v:1: the PIN went sealed and the key came back encrypted")
 	check(str(ok.get("phrase", "")) != "" and str(ok.phrase) == str(server.last_pair_phrase), "the app's check words are the PC's: %s" % str(ok.get("phrase", "")))
 	check(str(server.pc_name()) in (pm.link.link.get("pair_v_pcs", []) as Array), "and it remembers that this PC pairs safely (no downgrade later)")
+	check(pm.signs and pm.client.sign and AIClient.pc_sign and bool(pm.link.link.get("sig", false)), "from now on it signs (sync, the AI, kept across restarts)")
 	eq(pm.link.token().length(), 64, "the key is kept in the app's own folder")
 	check(not FileAccess.get_file_as_string(AppLink.link_file(phone_root)).is_empty())
 	eq(str(pm.client.only_slots), ",".join(Slots.phone_ids()), "it syncs every world the PC lets the phone play")
@@ -595,6 +596,7 @@ func test_app_mode_pairs_offers_updates_and_retries_while_the_pc_is_away() -> vo
 		await frames(3)
 	check("syncing" in states, "resume -> sync")
 	AIClient.pc_token = ""
+	AIClient.pc_sign = false
 	AIClient.configure({"preset": "mock"})
 	main.queue_free()
 	await _stop_pc()
