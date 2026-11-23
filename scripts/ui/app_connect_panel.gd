@@ -301,12 +301,12 @@ func _show_paired_step(result: Dictionary) -> void:
 
 func _verify_step() -> void:
 	title_label.text = "Check the words"
-	body.add_child(UiKit.para("Check these words match your PC", 24, ThemeBuilderC.YELLOW))
-	var words := UiKit.label(pair_phrase, 38, ThemeBuilderC.CREAM)
+	body.add_child(UiKit.para("Check these words match your PC", 26, ThemeBuilderC.YELLOW))
+	var words := UiKit.label(pair_phrase, 46, ThemeBuilderC.CREAM)
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(words)
-	body.add_child(UiKit.para("The same three words must be on the PC's Phone Link screen. This keeps a relay from pairing in your place.", 20, ThemeBuilderC.MUTED))
+	body.add_child(UiKit.para("The PC's Phone Link screen shows three words now. If they are different, something on the network may be in between: tap They don't match.", 20, ThemeBuilderC.MUTED))
 	body.add_child(UiKit.button("They match", func(): show_step("done"), 220))
 	body.add_child(UiKit.button("They don't match", func(): _reject_phrase(), 240))
 	_message()

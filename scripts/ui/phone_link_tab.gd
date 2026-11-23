@@ -322,7 +322,7 @@ func _status(srv: Node) -> void:
 	if str(srv.last_pair_phrase) != "":
 		var pair := _card(ThemeBuilder.YELLOW)
 		pair.add_child(UiKit.label("Check these words match your phone", 20, ThemeBuilder.YELLOW))
-		pair.add_child(UiKit.label(str(srv.last_pair_phrase), 30, ThemeBuilder.CREAM))
+		pair.add_child(UiKit.label(str(srv.last_pair_phrase), 32, ThemeBuilder.CREAM))
 		pair.add_child(UiKit.para("%s just paired. If its words are different, forget it below and pair again." % str(srv.last_pair_device), 16, ThemeBuilder.MUTED))
 	elif bool(srv.last_pair_legacy) and str(srv.last_pair_device) != "":
 		_v.add_child(UiKit.para("⚠ %s paired the old way: its key crossed the network unencrypted. Update Polox on that phone, forget it below and pair again." % str(srv.last_pair_device), 16, ThemeBuilder.DANGER))
