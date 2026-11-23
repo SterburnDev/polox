@@ -19,6 +19,7 @@ var step := ""
 var target: Dictionary = {}     # the PC picked: {name, url, path}
 var pin := ""
 var device_name := "Android phone"
+var pair_phrase := ""
 var _pin_label: Label
 var _pin_field: LineEdit   # the same PIN through Android's own number keyboard
 var _pairing := false      # (one PIN at a time, from the keypad or the keyboard)
@@ -73,6 +74,8 @@ func show_step(s: String) -> void:
 			_pin_step()
 		"qr":
 			_qr_step()
+		"verify":
+			_verify_step()
 		"done":
 			_done_step()
 
@@ -282,7 +285,7 @@ func submit_pin() -> void:
 	if r.ok:
 		phone.link.link["device_name"] = device_name
 		phone.link.save_link()
-		show_step("done")
+		_show_paired_step(r)
 	else:
 		pin = ""
 		if _pin_field:
@@ -291,7 +294,39 @@ func submit_pin() -> void:
 		say(pin_error(str(r.get("error", ""))))
 
 
+func _show_paired_step(result: Dictionary) -> void:
+	pair_phrase = str(result.get("phrase", ""))
+	show_step("verify" if pair_phrase != "" else "done")
+
+
+func _verify_step() -> void:
+	title_label.text = "Check the words"
+	body.add_child(UiKit.para("Check these words match your PC", 24, ThemeBuilderC.YELLOW))
+	var words := UiKit.label(pair_phrase, 38, ThemeBuilderC.CREAM)
+	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(words)
+	body.add_child(UiKit.para("The same three words must be on the PC's Phone Link screen. This keeps a relay from pairing in your place.", 20, ThemeBuilderC.MUTED))
+	body.add_child(UiKit.button("They match", func(): show_step("done"), 220))
+	body.add_child(UiKit.button("They don't match", func(): _reject_phrase(), 240))
+	_message()
+
+
+func _reject_phrase() -> void:
+	await phone.unpair()
+	if not is_inside_tree():
+		return
+	pair_phrase = ""
+	pin = ""
+	show_step("pin")
+	say("Those words didn't match, so the new pairing was removed. Check the PC and type its new PIN.")
+
+
 static func pin_error(e: String) -> String:
+	if e.contains("verify") or e.contains("interference"):
+		return "Response didn't verify: possible interference. Check the PC and try again; no new key was stored."
+	if e.contains("new PIN") or e.contains("stale"):
+		return "The PC has a new PIN. Type the new PIN shown on your PC."
 	if e.contains("wrong") or e.contains("PIN") or e.contains("code"):
 		return "That PIN didn't match. Check the PC's screen (the PIN changes every 10 minutes) and try again. (%s)" % e
 	if e.contains("offline"):
@@ -334,7 +369,7 @@ func on_scanned(text: String) -> void:
 		if not is_inside_tree():
 			return
 		if r.ok:
-			show_step("done")
+			_show_paired_step(r)
 			return
 		last_error = str(r.get("error", ""))
 	say(pin_error(last_error) + " You can type the PIN instead.")
@@ -355,6 +390,9 @@ func _done_step() -> void:
 
 
 func on_back() -> bool:
+	if step == "verify":
+		_reject_phrase()
+		return true
 	if step in ["pin", "qr"]:
 		show_step("search")
 		return true

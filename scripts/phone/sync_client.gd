@@ -14,6 +14,7 @@ signal _pulls_done
 const SyncFiles := preload("res://scripts/phone/sync_files.gd")
 const HttpUtil := preload("res://scripts/phone/http_util.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
+const Pairing := preload("res://scripts/phone/pairing.gd")
 
 const TIMEOUT_S := 30.0
 const KEEP_LOCAL_SNAPSHOTS := 3
@@ -538,14 +539,48 @@ func _request_once(method: String, path: String, body: PackedByteArray, epoch: i
 	return {"ok": code >= 200 and code < 300, "code": code, "body": bytes, "json": json if json != null else {}, "error": e}
 
 
-## Pairs with a code typed on the phone. Returns {ok, token, error}.
+## Pairs with a code typed on the phone. Returns {ok, token, phrase, pair_v} or {ok: false, error,
+## stale_salt?}. A PC that offers pair_v:1 (GET /api/pairing?wrap=1) gets the PIN sealed to its key
+## and sends the key back encrypted (pairing.gd); only a PC that doesn't offer it (an older Polox)
+## gets the PIN as is, and never when `require_wrap` (this phone paired with that PC safely before).
 ## `client_id`: this phone's own id, so pairing again replaces its old entry on the PC instead of adding one.
-func pair(code: String, device_name: String, client_id: String = "") -> Dictionary:
+func pair(code: String, device_name: String, client_id: String = "", require_wrap: bool = false) -> Dictionary:
 	var saved := token
 	token = ""
-	var r := await request("POST", "/api/pair", JSON.stringify({"code": code, "device": device_name, "client": client_id}).to_utf8_buffer())
-	if r.ok and r.json is Dictionary and str(r.json.get("token", "")) != "":
-		token = str(r.json.token)
-		return {"ok": true, "token": token}
+	var capability := await request("GET", "/api/pairing?wrap=1")
+	if int(capability.code) == 0:
+		token = saved
+		return {"ok": false, "error": capability.error}
+	var offered: bool = capability.ok and capability.json is Dictionary and (capability.json as Dictionary).has("pair_v")
+	var body := {"device": device_name, "client": client_id}
+	var opener := {}
+	if offered:
+		var sealed := Pairing.seal_request(capability.json, code)
+		if not bool(sealed.ok):
+			token = saved
+			return {"ok": false, "error": str(sealed.error)}
+		body.merge(sealed.body, true)
+		opener = sealed.open
+	elif require_wrap:
+		token = saved   # a PC that paired safely before now answers like an old one: someone may be in between
+		return {"ok": false, "error": Pairing.PAIR_FAILED}
+	else:
+		body["code"] = code
+	var r := await request("POST", "/api/pair", JSON.stringify(body).to_utf8_buffer())
+	if r.ok and r.json is Dictionary:
+		if offered:
+			var opened := Pairing.open_answer(r.json, code, opener)
+			token = str(opened.token) if bool(opened.ok) else saved
+			if not bool(opened.ok):
+				return {"ok": false, "error": str(opened.error)}
+			return {"ok": true, "token": token, "phrase": str(opened.phrase), "pair_v": Pairing.PAIR_WRAP_VERSION}
+		if str(r.json.get("token", "")) != "":
+			token = str(r.json.token)
+			return {"ok": true, "token": token, "phrase": "", "pair_v": 0}
+	if not opener.is_empty():
+		Pairing._wipe(opener.secret)
 	token = saved
-	return {"ok": false, "error": r.error}
+	var failure := {"ok": false, "error": r.error}
+	if r.json is Dictionary and bool(r.json.get("stale_salt", false)):
+		failure["stale_salt"] = true
+	return failure

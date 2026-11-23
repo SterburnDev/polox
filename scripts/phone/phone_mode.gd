@@ -205,6 +205,9 @@ func connect_pc(seconds: float = 3.0) -> Dictionary:
 	if r.ok:
 		use_origin(str(r.url))
 		if paired():
+			var full := await _hello_with_key({})
+			if not full.is_empty():
+				link.remember(full, str(r.url))   # the PC's other addresses may have changed
 			await refresh_worlds()
 		await check_update()
 		await send_crash_reports()
@@ -263,17 +266,33 @@ func pair_with(url: String, pin: String, device_name: String, how: String = "typ
 	if not hello.ok:
 		return {"ok": false, "error": "No Polox at %s (%s)." % [url, hello.error]}
 	use_origin(url)
-	var r: Dictionary = await client.pair(pin, device_name, link.client_id())
+	# A PC that paired with pair_v:1 once never gets the PIN as is again (an answer without it is a downgrade).
+	var safe_pcs: Array = link.link.get("pair_v_pcs", []) if link.link.get("pair_v_pcs", []) is Array else []
+	var r: Dictionary = await client.pair(pin, device_name, link.client_id(), str(hello.name) in safe_pcs)
 	if not r.ok:
 		return r
 	token = str(r.token)
 	AIClient.pc_token = token
 	link.link["token"] = token
 	link.link["paired_at"] = Time.get_datetime_string_from_system()
-	link.remember(hello.hello, url)
+	if int(r.get("pair_v", 0)) == 1 and not str(hello.name) in safe_pcs:
+		safe_pcs.append(str(hello.name))
+		link.link["pair_v_pcs"] = safe_pcs
+	link.remember(await _hello_with_key(hello.hello), url)
 	connection = {"ok": true, "url": url, "path": how if how in ["qr", "typed"] else "home", "name": hello.name, "tried": []}
 	await refresh_worlds()
-	return {"ok": true}
+	return {"ok": true, "phrase": str(r.get("phrase", "")), "pair_v": int(r.get("pair_v", 0))}
+
+
+## /hello.json again with the key: a stranger only gets the PC's name, a paired phone also gets its
+## other addresses (Tailscale, home network), which finding the PC away from home needs.
+func _hello_with_key(fallback: Dictionary) -> Dictionary:
+	if not paired():
+		return fallback
+	var r: Dictionary = await client.request("GET", "/hello.json")
+	if r.ok and r.json is Dictionary and (r.json as Dictionary).has("pc_name"):
+		return r.json
+	return fallback
 
 
 ## Forget the PC's key (the worlds on this phone stay; pair again to sync).

@@ -97,11 +97,17 @@ func run(main_node: Node) -> void:
 	await _wait(0.2)
 	for d in str(c1.get("pin", "")):
 		panel.press_key(d)
-	if not await _until(func(): return is_instance_valid(panel) and panel.step == "done", 20.0):
+	if not await _until(func(): return is_instance_valid(panel) and panel.step in ["verify", "done"], 20.0):
 		out("fail", {"why": "pairing", "msg": panel._msg.text if is_instance_valid(panel) and panel._msg else ""})
 		return
+	if panel.step == "verify":
+		out("verify", {"phrase": panel.pair_phrase})
+		_buttons(panel, "They match")[0].pressed.emit()
+		if not await _until(func(): return is_instance_valid(panel) and panel.step == "done", 20.0):
+			out("fail", {"why": "phrase confirmation"})
+			return
 	out("paired", {"path": str(phone.connection.get("path", "")), "url": phone.origin, "pc": phone.link.pc_name(), "text": phone.connection_text(),
-		"token_saved": phone.link.token().length() == 64})
+		"token_saved": phone.link.token().length() == 64, "phrase": panel.pair_phrase})
 	_buttons(panel, "Start")[0].pressed.emit()
 	await _until(func(): return phone.client.state in ["ok", "conflict", "error", "offline"] and not phone.client.busy, 30.0)
 	await _wait(0.5)
