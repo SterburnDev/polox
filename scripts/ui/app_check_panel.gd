@@ -48,6 +48,7 @@ func run() -> void:
 	hint_label.text = "Checking..."
 	sent_label.text = ""
 	var url: String = phone.origin
+	check.sign = phone.get("signs") == true
 	var out: Dictionary = await check.run(url, phone.token, phone.link, str(phone.client.only_slots))
 	running = false
 	if not is_inside_tree():

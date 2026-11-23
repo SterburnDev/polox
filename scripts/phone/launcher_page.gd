@@ -8,10 +8,12 @@ extends RefCounted
 ##   + Forget this phone, Having trouble? (/hello)
 ##
 ## The device key goes to localStorage "polox_token" (the game reads it from
-## there) once the words were checked; covers are fetched with the key and shown
-## as blob: URLs (an <img> can't send it). The PIN never travels readable: it is
-## sealed to the PC's key (pair_v:1, pairing.gd) and the key comes back encrypted.
-## Only a browser without BigInt pairs the old way (the PIN in the POST body).
+## there) once the words were checked, with "polox_sig" = "1": from then on every
+## request is signed (sigHeader, request_sig.gd) and the key itself never travels.
+## Covers are fetched that way and shown as blob: URLs (an <img> can't sign).
+## The PIN never travels readable: it is sealed to the PC's key (pair_v:1,
+## pairing.gd) and the key comes back encrypted. Only a browser without BigInt
+## pairs the old way (the PIN in the POST body, the key as a Bearer header).
 ## Built with replace(), not "%": the CSS and JS are full of percent signs.
 ## No backslashes in the JS either (GDScript would eat them).
 ## Tags: [PAIRING]
@@ -233,6 +235,24 @@ function pairOpen(j, pin, w) {
   if (typeof j.phrase === "string" && !pxSame(j.phrase, phrase)) throw new Error("phrase");
   return { token: token, phrase: phrase };
 }
+let clockOffset = 0;   // the PC's clock minus this phone's (seconds), from the PC's answers (request_sig.gd)
+function sigClock(j) { if (j && typeof j.now === "number" && j.now > 1000000000) clockOffset = Math.round(j.now - Date.now() / 1000); }
+function sigDecode(s) { try { return decodeURIComponent(s.split("+").join(" ")); } catch (e) { return s; } }
+function sigTarget(url) {
+  const q = url.indexOf("?"), map = {};
+  if (q >= 0) for (const part of url.slice(q + 1).split("&")) {
+    if (!part) continue;
+    const e = part.indexOf("=");
+    map[pxHex(pxText(sigDecode(e < 0 ? part : part.slice(0, e))))] = pxHex(pxText(sigDecode(e < 0 ? "" : part.slice(e + 1))));
+  }
+  return pxHex(pxText(sigDecode(q < 0 ? url : url.slice(0, q)))) + "?" + Object.keys(map).sort().map((k) => k + "=" + map[k]).join("&");
+}
+function sigHeader(token, method, url, body) {
+  const ts = Math.floor(Date.now() / 1000) + clockOffset, nonce = pxRandomHex(16), t = pxText(token), key = pxSha256(t), b = pxText(body || "");
+  const mac = pxHmac(key, pxText("polox-sig|1|" + method.toUpperCase() + "|" + sigTarget(url) + "|" + ts + "|" + nonce + "|" + pxHex(pxSha256(b))));
+  const sig = pxHex(mac); pxWipe(t); pxWipe(key); pxWipe(b); pxWipe(mac);
+  return "Polox-Sig v=1,ts=" + ts + ",nonce=" + nonce + ",sig=" + sig;
+}
 """
 
 
@@ -265,13 +285,29 @@ function show(which) {
   $("forget").classList.toggle("hide", which !== "s-worlds");
 }
 function token() { return store.get("polox_token"); }
+function signs() { return store.get("polox_sig") === "1"; }   // paired with pair_v:1: sign, never send the key
+function keep(t, signed) { store.set("polox_token", t); store.set("polox_token_at", here); if (signed) store.set("polox_sig", "1"); else store.del("polox_sig"); }
+function drop() { store.del("polox_token"); store.del("polox_sig"); }
 async function api(path, opts) {
   opts = opts || {};
-  const h = opts.headers || {};
-  if (token()) h["Authorization"] = "Bearer " + token();
-  if (opts.body) h["Content-Type"] = "application/json";
-  opts.headers = h; opts.cache = "no-store";
-  return fetch(path, opts);
+  const method = (opts.method || "GET").toUpperCase();
+  const send = () => {
+    const h = Object.assign({}, opts.headers || {}), t = token();
+    if (t) h["Authorization"] = signs() ? sigHeader(t, method, path, opts.body) : "Bearer " + t;
+    if (opts.body) h["Content-Type"] = "application/json";
+    return fetch(path, { method: method, body: opts.body, headers: h, cache: "no-store" });
+  };
+  let r = await send();
+  if (r.status === 401 && token() && signs()) {
+    // A clock refusal carries the PC's time: sign with it once more. Never forget the key over a clock.
+    const j = await r.clone().json().catch(() => ({}));
+    if (j.clock) {
+      sigClock(j); r = await send();
+      const k = await r.clone().json().catch(() => ({}));
+      if (r.status === 401 && k.clock) throw new Error("clock");
+    }
+  }
+  return r;
 }
 let cooldownTimer = 0;
 function cooldown(seconds) {
@@ -292,7 +328,7 @@ async function showPin(note) {
   $("pinmsg").classList.remove("bad");
   try {
     const r = await (await api("/api/pairing?wrap=1")).json();
-    pairCap = r;
+    pairCap = r; sigClock(r);
     if (r.paused) { $("pin").disabled = true; $("pinbtn").disabled = true;
       $("pinmsg").textContent = "Pairing is paused after too many wrong PINs. On the PC press Unlock pairing, then reload this page."; return; }
     if (r.cooldown > 0) { cooldown(r.cooldown); return; }
@@ -320,7 +356,7 @@ async function sendPin() {
     let cap = null;
     try { cap = await (await api("/api/pairing?wrap=1")).json(); } catch (e) { cap = null; }
     if (!cap || typeof cap !== "object") { $("pinmsg").textContent = "Couldn't reach your PC. Is Phone Link still on?"; sending = false; return; }
-    pairCap = cap;
+    pairCap = cap; sigClock(cap);
     const body = { device: $("name").value, client: clientId() };
     let wrap = null;
     if (pairCan(pairCap)) {
@@ -337,7 +373,7 @@ async function sendPin() {
       try { opened = pairOpen(j, pin, wrap); } catch (e) { opened = null; }
       if (opened) { showWords(opened); } else { interference(); }
     }
-    else if (j.ok) { store.set("polox_token", j.token); store.set("polox_token_at", here); await showWorlds(); }
+    else if (j.ok) { keep(j.token, false); await showWorlds(); }
     else if (r.status === 409 && j.stale_salt) { await showPin("The PC has a new PIN. Type the new PIN shown on your PC."); }
     else if (r.status === 429) { cooldown(j.retry_after || 60); }
     else if (r.status === 423) { $("pin").disabled = true; $("pinbtn").disabled = true; $("pinmsg").textContent = j.error; }
@@ -353,13 +389,13 @@ function showWords(opened) {
 }
 $("vyes").onclick = async () => {
   if (!pending) return;
-  store.set("polox_token", pending.token); store.set("polox_token_at", here); pending = null;
+  keep(pending.token, true); pending = null;
   await showWorlds();
 };
 $("vno").onclick = async () => {
   const p = pending; pending = null;
   if (p) {
-    try { await fetch("/api/unpair", { method: "POST", body: "{}", cache: "no-store", headers: { "Authorization": "Bearer " + p.token, "Content-Type": "application/json" } }); } catch (e) {}
+    try { await fetch("/api/unpair", { method: "POST", body: "{}", cache: "no-store", headers: { "Authorization": sigHeader(p.token, "POST", "/api/unpair", "{}"), "Content-Type": "application/json" } }); } catch (e) {}
   }
   await showPin("Those words didn't match, so this pairing was removed. On the PC, forget any phone you don't know, then type the new PIN.");
   $("pinmsg").classList.add("bad");
@@ -381,7 +417,7 @@ async function showWorlds() {
   show("s-worlds");
   let r;
   try { r = await api("/api/worlds"); } catch (e) { show("s-down"); return; }
-  if (r.status === 401) { store.del("polox_token"); showPin("This phone was forgotten on the PC (or its key ran out). Type the PIN to pair again: your saves stay."); return; }
+  if (r.status === 401) { drop(); showPin("This phone was forgotten on the PC (or its key ran out). Type the PIN to pair again: your saves stay."); return; }
   const j = await r.json();
   game = j.game || game;
   const box = $("worlds"); box.textContent = "";
@@ -406,7 +442,7 @@ async function play(id, name) {
   $("playmsg").textContent = "Opening " + name + "...";
   try {
     const r = await api("/api/session", { method: "POST", body: JSON.stringify({ slot: id }) });
-    if (r.status === 401) { store.del("polox_token"); showPin("Type the PIN to pair again."); return; }
+    if (r.status === 401) { drop(); showPin("Type the PIN to pair again."); return; }
     const j = await r.json();
     if (!j.ok) { $("playmsg").textContent = j.error || "That world isn't available."; return; }
     if (!j.game_ok) { $("playmsg").classList.add("bad"); $("playmsg").textContent = j.why + " Your worlds are safe."; return; }
@@ -417,12 +453,12 @@ async function play(id, name) {
 $("forget").onclick = async () => {
   if (!confirm("Forget this phone? You can pair it again any time with the PIN. Your worlds stay on the PC.")) return;
   try { await api("/api/unpair", { method: "POST", body: "{}" }); } catch (e) {}
-  store.del("polox_token"); store.del("polox_slot");
+  drop(); store.del("polox_slot");
   showPin("This phone is forgotten. Type the PIN to pair again.");
 };
 $("retry").onclick = () => start();
 async function start() {
-  if (info.always_ask) store.del("polox_token");   // "Always ask for PIN": a fresh key every visit
+  if (info.always_ask) drop();   // "Always ask for PIN": a fresh key every visit
   if (token()) { await showWorlds(); } else { await showPin(""); }
 }
 start();

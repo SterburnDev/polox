@@ -15,6 +15,7 @@ const SyncFiles := preload("res://scripts/phone/sync_files.gd")
 const HttpUtil := preload("res://scripts/phone/http_util.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
 const Pairing := preload("res://scripts/phone/pairing.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 const TIMEOUT_S := 30.0
 const KEEP_LOCAL_SNAPSHOTS := 3
@@ -24,6 +25,7 @@ const RETRY_DELAYS_S: Array[float] = [0.4, 1.2]
 var base_url := ""          # e.g. http://192.168.1.20:8737 (the page's own origin on a phone)
 var only_slots := ""        # the world(s) to sync ("a,b"; "" = what the PC picks: its active one)
 var token := ""
+var sign := false           # paired with pair_v:1: every request is signed (request_sig.gd), the key never sent
 var local_root := ""
 var state := "idle"         # idle | syncing | ok | conflict | offline | unpaired | error
 ## Your Light World as the PC said at the last sync: "shared", "private", "none" ("" before the first).
@@ -456,7 +458,9 @@ func _notify_committed(result: Dictionary) -> void:
 
 
 func _fail_state(r: Dictionary) -> void:
-	if int(r.code) == 401:
+	if bool(r.get("clock", false)):
+		_set_state("error", str(r.error))
+	elif int(r.code) == 401:
 		_set_state("unpaired", "Not paired: pair this phone again (it keeps your saves).")
 	elif int(r.code) == 0:
 		_set_state("offline", "PC offline")
@@ -486,6 +490,12 @@ func _request_epoch(method: String, path: String, body: PackedByteArray, epoch: 
 		if not _alive(epoch):
 			return {"ok": false, "code": 0, "body": PackedByteArray(), "json": {}, "error": "cancelled"}
 		r = await _request_once(method, path, body, epoch)
+	if sign and int(r.code) == 401 and r.json is Dictionary and bool(r.json.get("clock", false)) and _alive(epoch):
+		RequestSig.learn_clock(r.json)   # the PC's time came with the refusal: sign with it, once
+		r = await _request_once(method, path, body, epoch)
+		if int(r.code) == 401 and r.json is Dictionary and bool(r.json.get("clock", false)):
+			r["clock"] = true
+			r["error"] = "This phone's clock and the PC's are far apart: set both to the time from the network."
 	return r
 
 
@@ -503,7 +513,7 @@ func _request_once(method: String, path: String, body: PackedByteArray, epoch: i
 	http.request_completed.connect(func(result: int, code: int, hdrs: PackedStringArray, resp_body: PackedByteArray) -> void:
 		box["done"] = true
 		box["res"] = [result, code, hdrs, resp_body], CONNECT_ONE_SHOT)
-	var headers := PackedStringArray(["Authorization: Bearer " + token])
+	var headers := PackedStringArray([RequestSig.header(token, method, path, body) if sign and token != "" else "Authorization: Bearer " + token])
 	if not body.is_empty() and method == "POST":
 		headers.append("Content-Type: application/json")
 	var methods := {"GET": HTTPClient.METHOD_GET, "PUT": HTTPClient.METHOD_PUT, "POST": HTTPClient.METHOD_POST, "DELETE": HTTPClient.METHOD_DELETE}
@@ -573,10 +583,13 @@ func pair(code: String, device_name: String, client_id: String = "", require_wra
 			token = str(opened.token) if bool(opened.ok) else saved
 			if not bool(opened.ok):
 				return {"ok": false, "error": str(opened.error)}
-			return {"ok": true, "token": token, "phrase": str(opened.phrase), "pair_v": Pairing.PAIR_WRAP_VERSION}
+			sign = true   # this PC knows the phone signs: its key alone never opens anything now
+			RequestSig.learn_clock(capability.json)
+			return {"ok": true, "token": token, "phrase": str(opened.phrase), "pair_v": Pairing.PAIR_WRAP_VERSION, "sig": true}
 		if str(r.json.get("token", "")) != "":
 			token = str(r.json.token)
-			return {"ok": true, "token": token, "phrase": "", "pair_v": 0}
+			sign = false
+			return {"ok": true, "token": token, "phrase": "", "pair_v": 0, "sig": false}
 	if not opener.is_empty():
 		Pairing._wipe(opener.secret)
 	token = saved

@@ -30,6 +30,7 @@ const RETRY_OFFLINE_S := 60.0   # the app: look for the PC again this often whil
 var main: Node
 var origin := ""
 var token := ""
+var signs := false              # paired with pair_v:1: requests are signed (request_sig.gd), the key never sent
 var client: Node                # sync_client.gd
 var _push_in := -1.0
 var _js_callbacks: Array = []   # JavaScriptObjects must stay referenced
@@ -81,9 +82,11 @@ func setup(main_node: Node) -> void:
 			link.listen_address = "127.0.0.1"
 		origin = str(link.link.get("last_url", "")) if origin == "" else origin
 		token = link.token() if token == "" else token
+		signs = bool(link.link.get("sig", false))
 	if OS.has_feature("web"):
 		origin = str(JavaScriptBridge.eval("location.origin", true))
 		token = str(JavaScriptBridge.eval("localStorage.getItem('polox_token') || ''", true))
+		signs = str(JavaScriptBridge.eval("localStorage.getItem('polox_sig') || ''", true)) == "1"   # the launcher's pair_v:1
 		slot = str(JavaScriptBridge.eval("(function () { var m = /[#&]slot=([^&]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : (localStorage.getItem('polox_slot') || ''); })()", true))
 		storage_ok = OS.is_userfs_persistent()
 		JavaScriptBridge.eval("window.poloxBooted = Date.now(); 1", true)   # the start-up diagnostics (boot_diag.gd) stop waiting
@@ -94,6 +97,7 @@ func setup(main_node: Node) -> void:
 	add_child(client)
 	client.base_url = origin
 	client.token = token
+	client.sign = signs
 	client.only_slots = slot if slot != "" else _arg("--phone-slot=")
 	if app:
 		client.only_slots = ",".join(PackedStringArray(link.link.get("worlds", [])))
@@ -107,6 +111,7 @@ func setup(main_node: Node) -> void:
 	ai["base_url"] = origin
 	GameState.settings["ai"] = ai
 	AIClient.pc_token = token
+	AIClient.pc_sign = signs
 	AIClient.configure(ai)
 	SaveManager.saved.connect(_schedule_push)
 	ChatLog.logged.connect(func(_e): _schedule_push(""))
@@ -272,8 +277,11 @@ func pair_with(url: String, pin: String, device_name: String, how: String = "typ
 	if not r.ok:
 		return r
 	token = str(r.token)
+	signs = bool(r.get("sig", false))
 	AIClient.pc_token = token
+	AIClient.pc_sign = signs
 	link.link["token"] = token
+	link.link["sig"] = signs
 	link.link["paired_at"] = Time.get_datetime_string_from_system()
 	if int(r.get("pair_v", 0)) == 1 and not str(hello.name) in safe_pcs:
 		safe_pcs.append(str(hello.name))
@@ -301,6 +309,9 @@ func unpair() -> void:
 		await client.request("POST", "/api/unpair")
 	token = ""
 	client.token = ""
+	client.sign = false
+	signs = false
+	AIClient.pc_sign = false
 	link.forget()
 
 

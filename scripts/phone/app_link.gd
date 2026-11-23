@@ -89,7 +89,7 @@ func client_id() -> String:
 
 ## Forget the pairing key (the worlds on this phone stay).
 func forget() -> void:
-	for k in ["token", "device_id"]:
+	for k in ["token", "device_id", "sig"]:
 		link.erase(k)
 	save_link()
 

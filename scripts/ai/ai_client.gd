@@ -27,6 +27,7 @@ const RateLimiter := preload("res://scripts/ai/rate_limiter.gd")
 const MockBrain := preload("res://scripts/ai/mock_brain.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
 const ApiErrors := preload("res://scripts/ai/api_errors.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 const KeyFormat := preload("res://scripts/ai/key_format.gd")
 
 const MAX_RETRIES := 2
@@ -49,6 +50,7 @@ var _next_ticket: int = 0
 var _serving: int = 0
 var _pending: int = 0
 var pc_token: String = ""              # Phone Link device token (phones only; never logged)
+var pc_sign := false                  # paired with pair_v:1: /api/ai is signed (request_sig.gd), the token never sent
 var models_note := ""                 # why the last list_models() came back empty ("" when it didn't)
 var _cancels := 0                     # cancel() adds one: every chat still out ends as "Stopped."
 var _skips := 0                       # the provider or its key changed: a wait meant for the old one ends
@@ -236,8 +238,10 @@ func _chat_via_pc(messages: Array, opts: Dictionary) -> Dictionary:
 	for k in ["max_tokens", "json", "temperature", "mock", "model"]:
 		if opts.has(k):
 			body.opts[k] = opts[k]
-	var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + pc_token])
-	var err := http.request(str(config.get("base_url", "")).trim_suffix("/") + "/api/ai", headers, HTTPClient.METHOD_POST, JSON.stringify(body))
+	var body_text := JSON.stringify(body)
+	var auth := RequestSig.header(pc_token, "POST", "/api/ai", body_text.to_utf8_buffer()) if pc_sign else "Authorization: Bearer " + pc_token
+	var headers := PackedStringArray(["Content-Type: application/json", auth])
+	var err := http.request(str(config.get("base_url", "")).trim_suffix("/") + "/api/ai", headers, HTTPClient.METHOD_POST, body_text)
 	var res: Array = [HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray()]
 	if err == OK:
 		var box := {"done": false, "res": res}

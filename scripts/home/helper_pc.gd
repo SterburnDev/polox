@@ -8,6 +8,7 @@ extends Node
 ## Tags: [AI_HELPER]
 
 const JsonUtil := preload("res://scripts/core/json_util.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 ## Set by cancel(): run() answers {"why": "cancelled"} at the next frame and nothing is read late.
 var cancelled := false
@@ -32,8 +33,10 @@ func run(phone: Node, provider: String, prompt: String, schema: Dictionary, web:
 	http.request_completed.connect(func(a, b, c, d) -> void:
 		box.done = true
 		box.reply = [a, b, c, d])
-	var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + str(phone.token)])
 	var body := JSON.stringify({"provider": provider, "prompt": prompt, "schema": schema, "web": web})
+	var signs: bool = phone.get("signs") == true   # (phone_mode.gd: paired with pair_v:1, so it signs)
+	var auth := RequestSig.header(str(phone.token), "POST", "/api/home-helper", body.to_utf8_buffer()) if signs else "Authorization: Bearer " + str(phone.token)
+	var headers := PackedStringArray(["Content-Type: application/json", auth])
 	var error := http.request(str(phone.origin).trim_suffix("/") + "/api/home-helper", headers, HTTPClient.METHOD_POST, body)
 	if error != OK:
 		_release()

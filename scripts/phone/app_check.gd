@@ -16,7 +16,9 @@ signal rung(result: Dictionary)
 
 const NetRules := preload("res://scripts/phone/net_rules.gd")
 const HttpUtil := preload("res://scripts/phone/http_util.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
+var sign := false            # the phone paired with pair_v:1: requests carry a signature, never the key
 var results: Array = []
 var hints := PackedStringArray()
 var info: Dictionary = {}
@@ -76,7 +78,7 @@ func _fetch(url: String, token: String = "", epoch: int = -1) -> Dictionary:
 	add_child(http)
 	var headers := PackedStringArray()
 	if token != "":
-		headers.append("Authorization: Bearer " + token)
+		headers.append(RequestSig.header(token, "GET", url) if sign else "Authorization: Bearer " + token)
 	var t0 := Time.get_ticks_msec()
 	if http.request(url, headers) != OK:
 		http.queue_free()
