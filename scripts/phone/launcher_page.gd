@@ -94,7 +94,7 @@ const BODY := """<main>
   <section id="s-down" class="hide">
     <div class="big">🌙</div>
     <h2>Can't reach your PC</h2>
-    <p>Is Phone Link still on, and is this phone on the same Wi-Fi?</p>
+    <p id="downmsg">Is Phone Link still on, and is this phone on the same Wi-Fi?</p>
     <button id="retry" class="main" type="button">Try again</button>
   </section>
 </div>
@@ -247,11 +247,20 @@ function sigTarget(url) {
   }
   return pxHex(pxText(sigDecode(q < 0 ? url : url.slice(0, q)))) + "?" + Object.keys(map).sort().map((k) => k + "=" + map[k]).join("&");
 }
-function sigHeader(token, method, url, body) {
+function sigMake(token, method, url, body) {
   const ts = Math.floor(Date.now() / 1000) + clockOffset, nonce = pxRandomHex(16), t = pxText(token), key = pxSha256(t), b = pxText(body || "");
   const mac = pxHmac(key, pxText("polox-sig|1|" + method.toUpperCase() + "|" + sigTarget(url) + "|" + ts + "|" + nonce + "|" + pxHex(pxSha256(b))));
   const sig = pxHex(mac); pxWipe(t); pxWipe(key); pxWipe(b); pxWipe(mac);
-  return "Polox-Sig v=1,ts=" + ts + ",nonce=" + nonce + ",sig=" + sig;
+  return { header: "Polox-Sig v=1,ts=" + ts + ",nonce=" + nonce + ",sig=" + sig, nonce: nonce };
+}
+function sigHeader(token, method, url, body) { return sigMake(token, method, url, body).header; }
+function sigRequired(url) { const p = url.split("?")[0]; return p.indexOf("/api/") === 0 && p !== "/api/pairing" && p !== "/api/pair" && p !== "/api/report"; }
+function sigAnswer(token, nonce, status, header, bytes) {
+  // The PC signs its answers to signed requests (X-Polox-Sig, request_sig.gd): no 2xx is used without it.
+  const m = /^v=1,sig=([0-9a-f]{64})$/.exec(String(header || "").trim());
+  if (!m) return status >= 400;
+  const t = pxText(token), key = pxSha256(t), mac = pxHmac(key, pxText("polox-resp|1|" + nonce + "|" + status + "|" + pxHex(pxSha256(bytes))));
+  const ok = pxSame(pxHex(mac), m[1]); pxWipe(t); pxWipe(key); pxWipe(mac); return ok;
 }
 """
 
@@ -291,11 +300,13 @@ function drop() { store.del("polox_token"); store.del("polox_sig"); }
 async function api(path, opts) {
   opts = opts || {};
   const method = (opts.method || "GET").toUpperCase();
-  const send = () => {
-    const h = Object.assign({}, opts.headers || {}), t = token();
-    if (t) h["Authorization"] = signs() ? sigHeader(t, method, path, opts.body) : "Bearer " + t;
+  const send = async () => {
+    const h = Object.assign({}, opts.headers || {}), t = token(), signed = t && signs() ? sigMake(t, method, path, opts.body) : null;
+    if (signed) h["Authorization"] = signed.header; else if (t) h["Authorization"] = "Bearer " + t;
     if (opts.body) h["Content-Type"] = "application/json";
-    return fetch(path, { method: method, body: opts.body, headers: h, cache: "no-store" });
+    const r = await fetch(path, { method: method, body: opts.body, headers: h, cache: "no-store" });
+    if (signed && sigRequired(path) && !sigAnswer(t, signed.nonce, r.status, r.headers.get("X-Polox-Sig"), new Uint8Array(await r.clone().arrayBuffer()))) throw new Error("verify");
+    return r;
   };
   let r = await send();
   if (r.status === 401 && token() && signs()) {
@@ -413,10 +424,16 @@ async function cover(box, id) {
   } catch (e) {}
 }
 let game = { ok: true, present: true };
+function down(e) {
+  show("s-down");
+  $("downmsg").textContent = e && e.message === "verify"
+    ? "The PC's answer didn't verify: something on the network may be changing it. Try again; if it keeps happening, use Tailscale."
+    : "Is Phone Link still on, and is this phone on the same Wi-Fi?";
+}
 async function showWorlds() {
   show("s-worlds");
   let r;
-  try { r = await api("/api/worlds"); } catch (e) { show("s-down"); return; }
+  try { r = await api("/api/worlds"); } catch (e) { down(e); return; }
   if (r.status === 401) { drop(); showPin("This phone was forgotten on the PC (or its key ran out). Type the PIN to pair again: your saves stay."); return; }
   const j = await r.json();
   game = j.game || game;
@@ -448,7 +465,7 @@ async function play(id, name) {
     if (!j.game_ok) { $("playmsg").classList.add("bad"); $("playmsg").textContent = j.why + " Your worlds are safe."; return; }
     store.set("polox_slot", id);
     location.href = j.play;
-  } catch (e) { show("s-down"); }
+  } catch (e) { down(e); }
 }
 $("forget").onclick = async () => {
   if (!confirm("Forget this phone? You can pair it again any time with the PIN. Your worlds stay on the PC.")) return;

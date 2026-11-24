@@ -35,8 +35,8 @@ func run(phone: Node, provider: String, prompt: String, schema: Dictionary, web:
 		box.reply = [a, b, c, d])
 	var body := JSON.stringify({"provider": provider, "prompt": prompt, "schema": schema, "web": web})
 	var signs: bool = phone.get("signs") == true   # (phone_mode.gd: paired with pair_v:1, so it signs)
-	var auth := RequestSig.header(str(phone.token), "POST", "/api/home-helper", body.to_utf8_buffer()) if signs else "Authorization: Bearer " + str(phone.token)
-	var headers := PackedStringArray(["Content-Type: application/json", auth])
+	var signed := RequestSig.signed(str(phone.token), "POST", "/api/home-helper", body.to_utf8_buffer()) if signs else {}
+	var headers := PackedStringArray(["Content-Type: application/json", str(signed.header) if signs else "Authorization: Bearer " + str(phone.token)])
 	var error := http.request(str(phone.origin).trim_suffix("/") + "/api/home-helper", headers, HTTPClient.METHOD_POST, body)
 	if error != OK:
 		_release()
@@ -53,6 +53,8 @@ func run(phone: Node, provider: String, prompt: String, schema: Dictionary, web:
 	# (An answer that never arrived has no body: it is not parsed, so nothing is logged as a JSON error.)
 	var value: Variant = null
 	if reply.size() >= 4 and int(reply[0]) == HTTPRequest.RESULT_SUCCESS and reply[3] is PackedByteArray:
+		if signs and not RequestSig.verify_answer(str(phone.token), str(signed.nonce), int(reply[1]), reply[2], reply[3]):
+			return {"ok": false, "error": "The PC's answer didn't verify: possible interference on the network.", "why": "offline"}
 		value = JsonUtil.parse((reply[3] as PackedByteArray).get_string_from_utf8())
 	if not value is Dictionary:
 		return {"ok": false, "error": "The PC didn't finish the request. Reconnect before trying again.", "why": "offline"}

@@ -239,8 +239,8 @@ func _chat_via_pc(messages: Array, opts: Dictionary) -> Dictionary:
 		if opts.has(k):
 			body.opts[k] = opts[k]
 	var body_text := JSON.stringify(body)
-	var auth := RequestSig.header(pc_token, "POST", "/api/ai", body_text.to_utf8_buffer()) if pc_sign else "Authorization: Bearer " + pc_token
-	var headers := PackedStringArray(["Content-Type: application/json", auth])
+	var signed := RequestSig.signed(pc_token, "POST", "/api/ai", body_text.to_utf8_buffer()) if pc_sign else {}
+	var headers := PackedStringArray(["Content-Type: application/json", str(signed.header) if pc_sign else "Authorization: Bearer " + pc_token])
 	var err := http.request(str(config.get("base_url", "")).trim_suffix("/") + "/api/ai", headers, HTTPClient.METHOD_POST, body_text)
 	var res: Array = [HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray()]
 	if err == OK:
@@ -269,6 +269,9 @@ func _chat_via_pc(messages: Array, opts: Dictionary) -> Dictionary:
 	if mine != _cancels or not is_inside_tree():
 		return _stopped()
 	var code := int(res[1]) if int(res[0]) == HTTPRequest.RESULT_SUCCESS else 0
+	if pc_sign and code != 0 and not RequestSig.verify_answer(pc_token, str(signed.nonce), code, res[2], res[3]):
+		_set_status("error", "The PC's answer didn't verify")   # changed on the way, or not the PC's: not shown
+		return {"ok": false, "text": "", "error": "The PC's answer didn't verify: possible interference on the network.", "code": code}
 	var data: Variant = JsonUtil.parse((res[3] as PackedByteArray).get_string_from_utf8())
 	if code == 200 and data is Dictionary and bool(data.get("ok", false)):
 		_set_status("ready", "Talking through your PC")

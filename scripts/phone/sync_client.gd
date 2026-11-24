@@ -18,6 +18,7 @@ const Pairing := preload("res://scripts/phone/pairing.gd")
 const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 const TIMEOUT_S := 30.0
+const INTERFERENCE := "The PC's answer didn't verify: possible interference on the network. This phone didn't use it."
 const KEEP_LOCAL_SNAPSHOTS := 3
 const PULL_WIDTH := 6       # files fetched at once: a request waits a few frames, a phone runs at 30 fps
 const RETRY_DELAYS_S: Array[float] = [0.4, 1.2]
@@ -458,7 +459,7 @@ func _notify_committed(result: Dictionary) -> void:
 
 
 func _fail_state(r: Dictionary) -> void:
-	if bool(r.get("clock", false)):
+	if bool(r.get("clock", false)) or bool(r.get("interference", false)):
 		_set_state("error", str(r.error))
 	elif int(r.code) == 401:
 		_set_state("unpaired", "Not paired: pair this phone again (it keeps your saves).")
@@ -513,7 +514,9 @@ func _request_once(method: String, path: String, body: PackedByteArray, epoch: i
 	http.request_completed.connect(func(result: int, code: int, hdrs: PackedStringArray, resp_body: PackedByteArray) -> void:
 		box["done"] = true
 		box["res"] = [result, code, hdrs, resp_body], CONNECT_ONE_SHOT)
-	var headers := PackedStringArray([RequestSig.header(token, method, path, body) if sign and token != "" else "Authorization: Bearer " + token])
+	var signing := sign and token != ""
+	var signed := RequestSig.signed(token, method, path, body) if signing else {}
+	var headers := PackedStringArray([str(signed.header) if signing else "Authorization: Bearer " + token])
 	if not body.is_empty() and method == "POST":
 		headers.append("Content-Type: application/json")
 	var methods := {"GET": HTTPClient.METHOD_GET, "PUT": HTTPClient.METHOD_PUT, "POST": HTTPClient.METHOD_POST, "DELETE": HTTPClient.METHOD_DELETE}
@@ -539,6 +542,9 @@ func _request_once(method: String, path: String, body: PackedByteArray, epoch: i
 	var res: Array = box.res
 	var code := int(res[1]) if int(res[0]) == HTTPRequest.RESULT_SUCCESS else 0
 	var bytes: PackedByteArray = res[3]
+	if signing and code != 0 and RequestSig.answer_required(path) and not RequestSig.verify_answer(token, str(signed.nonce), code, res[2], bytes):
+		# The PC signs its answers to signed requests: this one was changed on the way, or isn't the PC's.
+		return {"ok": false, "code": 0, "body": PackedByteArray(), "json": {}, "interference": true, "error": INTERFERENCE}
 	var file_download := method == "GET" and path.begins_with("/api/file?")
 	var json: Variant = null if file_download else JsonUtil.parse(bytes.get_string_from_utf8())
 	var e := ""
