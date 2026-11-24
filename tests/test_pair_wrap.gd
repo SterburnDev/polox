@@ -299,18 +299,18 @@ func test_check_words_and_the_word_list() -> void:
 		unique[w] = true
 		check(w == w.to_lower() and w.is_valid_identifier(), "%s: one plain lowercase word" % w)
 	eq(unique.size(), 64, "all different")
-	var token := "0123456789abcdef".repeat(4)
+	var sample := "0123456789abcdef".repeat(4)   # (a made-up 64-hex value)
 	var fp := HttpUtil.sha256_bytes("a key".to_utf8_buffer())
-	var phrase := Pairing.phrase_for_token(token, fp)
-	eq(phrase, Pairing.phrase_for_token(token, fp), "deterministic")
+	var phrase := Pairing.phrase_for_token(sample, fp)
+	eq(phrase, Pairing.phrase_for_token(sample, fp), "deterministic")
 	eq(phrase.split(" ").size(), 3, "three words")
 	for w in phrase.split(" "):
 		check(w in Pairing.VERIFY_WORDS, w + " is from the list")
-	var digest := Pairing.hmac_sha256(token.to_utf8_buffer(), ("polox verify v1|" + fp).to_ascii_buffer())
-	eq(phrase, " ".join([Pairing.VERIFY_WORDS[digest[0] % 64], Pairing.VERIFY_WORDS[digest[1] % 64], Pairing.VERIFY_WORDS[digest[2] % 64]]), "bytes 0..2 of HMAC-SHA256(token, label + fingerprint), each % 64")
+	var digest := Pairing.hmac_sha256(sample.to_utf8_buffer(), ("polox verify v1|" + fp).to_ascii_buffer())
+	eq(phrase, " ".join([Pairing.VERIFY_WORDS[digest[0] % 64], Pairing.VERIFY_WORDS[digest[1] % 64], Pairing.VERIFY_WORDS[digest[2] % 64]]), "bytes 0..2 of HMAC-SHA256(sample, label + fingerprint), each % 64")
 	var differ := 0
 	for i in 8:
-		if Pairing.phrase_for_token(token, HttpUtil.sha256_bytes(("key %d" % i).to_utf8_buffer())) != phrase:
+		if Pairing.phrase_for_token(sample, HttpUtil.sha256_bytes(("key %d" % i).to_utf8_buffer())) != phrase:
 			differ += 1
 	check(differ >= 7, "another PC key gives other words (%d of 8)" % differ)
 	var page := LauncherPage.html({"pc_name": "PC"})
