@@ -9,13 +9,13 @@ labels: bug
 A short description of the issue.
 
 ## How to reproduce
-1. Start Polox Public Beta 1.0
+1. Start Polox Public Beta 1.01
 2. Go to ...
 3. Click / press ...
 
 ## Environment
 - **Platform:** Windows / Android / Phone Link (browser)
-- **Polox version:** Polox Public Beta 1.0
+- **Polox version:** Polox Public Beta 1.01
 - **Add-ons enabled:** None / list
 
 ## Notes

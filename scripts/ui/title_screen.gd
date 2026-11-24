@@ -206,7 +206,7 @@ func _build() -> void:
 	reflection.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip.add_child(reflection)
 	brand.add_child(clip)
-	var release_label := str(ProjectSettings.get_setting("application/config/release_label", "Polox Public Beta 1.0"))
+	var release_label := str(ProjectSettings.get_setting("application/config/release_label", "Polox Public Beta 1.01"))
 	var sub := UiKit.label(release_label, 22 if short else 26, ThemeBuilder.MUTED)
 	sub.name = "VersionLabel"
 	sub.mouse_filter = Control.MOUSE_FILTER_STOP

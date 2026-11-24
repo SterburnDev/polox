@@ -25,15 +25,15 @@ const SparringCatalog := preload("res://scripts/battle/sparring_catalog.gd")
 
 func test_version_label_and_title_secrets() -> void:
 	fresh_save_root()
-	eq(str(ProjectSettings.get_setting("application/config/release_label", "")), "Polox Public Beta 1.0", "release_label is Polox Public Beta 1.0")
+	eq(str(ProjectSettings.get_setting("application/config/release_label", "")), "Polox Public Beta 1.01", "release_label is Polox Public Beta 1.01")
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	tree.root.add_child(main)
 	await frames(3)
 	var ver := main.screen.find_child("VersionLabel", true, false) as Label
-	check(ver != null and ver.text == "Polox Public Beta 1.0", "title screen shows Polox Public Beta 1.0")
+	check(ver != null and ver.text == "Polox Public Beta 1.01", "title screen shows Polox Public Beta 1.01")
 	eq(main.screen.feed_title_secret("mochi"), "mochi", "typing mochi triggers title secret")
 	eq(main.screen.feed_title_secret("bramin"), "bramin", "typing bramin triggers title secret")
-	eq(Whimsy.version_quip(1), "Polox Public Beta 1.0 — freshly baked.", "first version click quip")
+	eq(Whimsy.version_quip(1), "Polox Public Beta 1.01 — freshly baked.", "first version click quip")
 	eq(Whimsy.version_quip(5).contains("sparkle"), true, "fifth click grants complimentary sparkle")
 	main.queue_free()
 	await frames(2)

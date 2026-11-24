@@ -1,6 +1,6 @@
 # Polox Documentation
 
-Welcome to the documentation hub for **Polox Public Beta 1.0**.
+Welcome to the documentation hub for **Polox Public Beta 1.01**.
 
 ## For Players
 
