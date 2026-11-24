@@ -9,6 +9,7 @@ extends "res://tests/test_case.gd"
 const Pairing := preload("res://scripts/phone/pairing.gd")
 const RequestSig := preload("res://scripts/phone/request_sig.gd")
 const PhoneServer := preload("res://scripts/phone/phone_server.gd")
+const HttpServer := preload("res://scripts/phone/http_server.gd")
 const SyncClient := preload("res://scripts/phone/sync_client.gd")
 const HttpUtil := preload("res://scripts/phone/http_util.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
@@ -130,6 +131,71 @@ func test_the_replay_memory_forgets_old_nonces() -> void:
 	p._sig_nonces_pruned = 0.0
 	check(p.authenticate(_req("GET", "/api/worlds", _auth(token, "GET", "/api/worlds"))).has("device"), "a fresh request")
 	eq(p._sig_nonces.size(), 1, "the expired nonces went, the fresh one stays")
+
+
+func test_the_pc_signs_its_answers_and_the_phone_checks_them() -> void:
+	await _start()
+	var token := _signing_phone(server.pairing)
+	var probe := Probe.new(tree)
+	var signed := RequestSig.signed(token, "GET", "/api/status")
+	var r: Dictionary = await probe.request("127.0.0.1", port, Probe.get_req("/api/status", {"Authorization": str(signed.header).trim_prefix("Authorization: ")}))
+	eq(int(r.code), 200)
+	var lines := PackedStringArray()
+	for k in r.headers:
+		lines.append("%s: %s" % [k, r.headers[k]])
+	check(str(r.headers.get("x-polox-sig", "")).begins_with("v=1,sig="), "the answer carries X-Polox-Sig")
+	check(RequestSig.verify_answer(token, str(signed.nonce), 200, lines, r.body), "and it verifies for this request")
+	var changed: PackedByteArray = (r.body as PackedByteArray).duplicate()
+	changed[changed.size() - 2] = 32
+	check(not RequestSig.verify_answer(token, str(signed.nonce), 200, lines, changed), "a changed answer doesn't")
+	check(not RequestSig.verify_answer(token, "0".repeat(32), 200, lines, r.body), "nor one moved to another request")
+	check(not RequestSig.verify_answer(token, str(signed.nonce), 200, PackedStringArray(), r.body), "an unsigned 2xx is never taken")
+	check(RequestSig.verify_answer(token, str(signed.nonce), 404, PackedStringArray(), r.body), "(an unsigned 4xx is just an error)")
+	var old_token := str(server.pairing.pair(server.pairing.code, "Old phone", "192.168.1.41").token)
+	var plain: Dictionary = await probe.request("127.0.0.1", port, Probe.get_req("/api/status", {"Authorization": "Bearer " + old_token}))
+	check(int(plain.code) == 200 and not plain.headers.has("x-polox-sig"), "an old-way phone's answers stay as they were")
+	var hello_signed := RequestSig.signed(token, "GET", "/hello.json")
+	var h: Dictionary = await probe.request("127.0.0.1", port, Probe.get_req("/hello.json", {"X-Forwarded-For": "192.168.1.40", "Authorization": str(hello_signed.header).trim_prefix("Authorization: ")}))
+	var hlines := PackedStringArray()
+	for k in h.headers:
+		hlines.append("%s: %s" % [k, h.headers[k]])
+	check(RequestSig.verify_answer(token, str(hello_signed.nonce), 200, hlines, h.body), "/hello.json in full comes signed")
+	check(RequestSig.answer_required("/api/worlds") and RequestSig.answer_required("http://192.168.1.20:8765/hello.json"), "the phone insists on signed answers for the API and /hello.json")
+	check(not RequestSig.answer_required("/api/pairing?wrap=1") and not RequestSig.answer_required("/api/report") and not RequestSig.answer_required("/app/version.json"), "but not where the PC can't know who asks")
+	await _stop()
+
+
+func test_a_changed_answer_never_reaches_the_phones_sync() -> void:
+	# A stand-in "PC" that answers without (or with a wrong) signature, like someone in between would.
+	var fake: Node = HttpServer.new()
+	tree.root.add_child(fake)
+	var mode := {"sig": ""}
+	fake.api_handler = func(_req: Dictionary, _ip: String) -> PackedByteArray:
+		var resp := HttpUtil.json_response(200, {"ok": true, "slots": [], "files": {}})
+		if str(mode.sig) == "":
+			return resp
+		var end := HttpUtil.header_end(resp)
+		var out := (resp.slice(0, end).get_string_from_utf8() + "\r\nX-Polox-Sig: v=1,sig=" + str(mode.sig) + "\r\n\r\n").to_utf8_buffer()
+		out.append_array(resp.slice(end + 4))
+		return out
+	var fport := listen_on_free_port(func(p: int) -> String: return fake.start(p, "127.0.0.1"), "stand-in PC")
+	var c := SyncClient.new()
+	tree.root.add_child(c)
+	c.base_url = "http://127.0.0.1:%d" % fport
+	c.token = "cd".repeat(32)
+	c.sign = true
+	for sig in ["", "0".repeat(64)]:
+		mode.sig = sig
+		var r: Dictionary = await c.request("GET", "/api/manifest")
+		check(not bool(r.ok) and bool(r.get("interference", false)), "an answer %s: refused as interference" % ("without a signature" if sig == "" else "with a wrong one"))
+		check((r.json as Dictionary).is_empty() and (r.body as PackedByteArray).is_empty(), "and nothing of it is handed on")
+	mode.sig = ""
+	var app: Dictionary = await c.request("GET", "/app/version.json")
+	check(not bool(app.get("interference", false)), "(pages that need no key aren't held to it)")
+	c.queue_free()
+	fake.stop()
+	fake.queue_free()
+	await frames(1)
 
 
 func test_the_apps_client_signs_everything_over_http() -> void:
