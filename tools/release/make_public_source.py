@@ -76,9 +76,18 @@ def run(arguments, cwd=None, data=None):
 
 # --- This PC's own facts -------------------------------------------------------------------------------
 
+def on_ci_runner():
+    """A hosted CI machine (GitHub Actions): its user name, host name and addresses belong to the build
+    robot, not to the owner (the runner's user is "runner", which matches every "test runner" in the
+    code), so there are no facts about the owner's PC to look for there."""
+    return os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+
+
 def machine_facts():
     """Strings that identify this PC or its owner's accounts: [(what, text)]. Short or generic values
-    are skipped, because they would match ordinary words."""
+    are skipped, because they would match ordinary words. None on a CI runner (on_ci_runner)."""
+    if on_ci_runner():
+        return []
     facts = []
 
     def add(what, value):
@@ -294,7 +303,8 @@ def main():
         for relative, number, what in findings:
             print(f"  {relative}:{number}  {what}")
         print(f"[privacy] {len(findings)} finding(s) in {len(files)} files of this checkout; checked against {len(facts)} facts about this PC"
-              + (f" and {len(private_words)} private words." if private_words else " (no --private-words file given)."))
+              + (f" and {len(private_words)} private words." if private_words else " (no --private-words file given).")
+              + (" On a CI runner: the machine's own names and addresses are the robot's, so only keys and patterns were checked." if on_ci_runner() else ""))
         sys.exit(1 if findings else 0)
     if not args.dest:
         parser.error("give the new folder for the snapshot, or --check-checkout")
