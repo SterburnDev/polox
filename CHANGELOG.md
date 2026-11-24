@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased (security: Phone Link pairing)
+## Polox Public Beta 1.01 (1.0.1) — Phone Link security release (2026-11-23)
+
+Phone Link on Same Wi-Fi no longer hands anything that opens your worlds to someone watching the network, and it checks more of what it receives. Phones that paired with an earlier Polox keep working; pair them again to get the new protection.
 
 - **Pairing on Same Wi-Fi no longer shows the PIN or the phone's key to anyone listening (pair_v:1).** The launcher and the Android app seal the PIN to an RSA-2048 key the PC makes for the session (memory only), and the key comes back encrypted and authenticated. A changed answer ends at "Response didn't verify: possible interference" with nothing kept. Both screens then show three **check words**: compare them, and tap *They don't match* if they differ (the new key is forgotten on both sides). Every old limit still applies (cooldowns, the hourly pause, the PIN changing after 10 wrong tries), and a seal that doesn't open counts as a wrong PIN. Older apps keep pairing the old way, and the PC warns "paired the old way" for them. An app that paired safely with a PC refuses the old way from that PC.
 - **And the key never travels again.** After a pair_v:1 pairing the launcher, the phone game, the Android app, its AI chats and home lookups through the PC, and Check connection all sign every request (`Authorization: Polox-Sig`: HMAC-SHA256 over the method, the address, the body, a time and a one-use nonce) instead of sending the key. The PC refuses that phone's bare key. A phone whose clock is far off gets the PC's time back and corrects itself. Phones that paired the old way keep working as before. What is synced still travels unencrypted on Same Wi-Fi (`SECURITY.md`, Known limits).
+- **The PC signs its answers too.** Every answer to a signed request carries `X-Polox-Sig`, tied to that request. The Android app, the phone game and the launcher use no answer that was changed on the way: they say "didn't verify: possible interference" instead.
+- **No DNS rebinding.** A web page that points its own domain at your PC (to read Phone Link as if it were that page) is refused before anything is served. Phones reaching the PC by address, by its name, through `.local`/`.lan` names or Tailscale are unaffected.
+- **Stricter pages.** The launcher, `/hello` and `/app` pages carry a Content-Security-Policy: only their own inline code runs, they talk only to the PC, and nothing can frame them.
 - **`/hello.json` tells strangers less.** Without a paired key it says only that Polox is there, its version and the PC's name. The addresses, the Tailscale name and the app version go to this PC itself and to paired phones (the app now asks again with its key after pairing, so it still learns the Tailscale address).
 - **Housekeeping:** upload chunks a phone abandoned (`.part`) are removed after a day, the wrong-PIN flood guard forgets addresses after an hour, a phone report that arrived in a GET address (anyone can make such a link) is marked ⚠ on the PC, and `audit.log` notes how each phone paired and the check words, never a key or a PIN.
 

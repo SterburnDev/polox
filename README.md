@@ -1,6 +1,6 @@
 # Polox
 
-> **Polox Public Beta 1.0** — A cozy, local-first 3D life-sim about **your** life.
+> **Polox Public Beta 1.01** — A cozy, local-first 3D life-sim about **your** life.
 
 Build rooms, draw the **Bramins** who live in your **Dream World**, and talk with them — they remember what you tell them and carry on with their own small lives while you're away. Map your real home and neighbourhood as the **Light World**, step through a glowing reddish bathtub-like **Dream Gate** into worlds you invent, and settle things in friendly battles you can design yourself.
 
@@ -15,6 +15,13 @@ Song: Zachz Winner, Фрози, Joyful - Boogie. Music provided by NoCopyrightSo
 Character.AI is a trademark of its owner; Polox is not affiliated with or endorsed by Character.AI.
 
 ![A made-up world: an outdoor place, a friend, the day's card](docs/images/world.png)
+
+## New in Public Beta 1.01: Phone Link security
+
+- **Pairing your phone gives nothing away on the Wi-Fi.** The PIN is sealed to a key your PC makes for the session, and the phone's key comes back encrypted. Then both screens show **three check words** to compare.
+- **Your phone's key never travels again.** Every request is signed instead, works once and can't be changed. The PC signs its answers back, and the phone refuses anything that was changed on the way.
+- **Web pages can't sneak in.** Phone Link refuses DNS-rebinding tricks and locks down its own pages with a strict Content-Security-Policy.
+- Older apps keep working; pair them again to get all of this. Details, and what plain Wi-Fi still can't hide: [SECURITY.md](SECURITY.md).
 
 ## Highlights in Polox Public Beta 1.0
 
@@ -36,7 +43,7 @@ Full details: [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 | You have | Do this |
 | --- | --- |
-| A Windows PC | Run **`Polox-1.0.0-Setup.exe`** (Start menu entry, uninstaller, no admin needed), or unzip the **portable zip** anywhere and double-click `Polox.exe` |
+| A Windows PC | Run **`Polox-1.0.1-Setup.exe`** (Start menu entry, uninstaller, no admin needed), or unzip the **portable zip** anywhere and double-click `Polox.exe` |
 | An Android phone | Install the APK, or open your PC's Phone Link address in the phone's browser |
 | The source | `tools\get_godot.bat` once, then `run.bat` (Windows) or `./run.sh` (macOS, Linux) |
 
