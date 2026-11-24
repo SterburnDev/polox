@@ -148,10 +148,13 @@ func test_head_odd_hosts_and_refused_address() -> void:
 	var p := Probe.new(tree)
 	var r: Dictionary = await p.request("127.0.0.1", port, "HEAD /ping HTTP/1.1\r\nHost: x\r\n\r\n")
 	check(r.code == 200 and r.body.is_empty() and int(r.headers.get("content-length", "0")) > 0, "HEAD: the length, no body")
-	for host in ["", "192.168.1.42:8765", "EXAMPLE-PC.local:8765", "x".repeat(3000), "[::1]:8765", "évil.example"]:
+	for host in ["", "192.168.1.42:8765", "EXAMPLE-PC.local:8765", "x".repeat(3000), "[::1]:8765"]:
 		var req: String = "GET /ping HTTP/1.1\r\n" +(("Host: " + host + "\r\n") if host != "" else "") + "\r\n"
 		r = await p.request("127.0.0.1", port, req)
 		eq(r.code, 200, "Host %s: answered" % (host.substr(0, 30) if host != "" else "(missing)"))
+	# A public name (DNS rebinding, test_phone_hardening.gd): a clean refusal, whatever its letters.
+	r = await p.request("127.0.0.1", port, "GET /ping HTTP/1.1\r\nHost: évil.example\r\n\r\n")
+	eq(r.code, 403, "Host évil.example: refused cleanly")
 	r = await p.request("127.0.0.1", port, "GET http://192.168.1.42:8765/ping HTTP/1.1\r\nHost: x\r\n\r\n")
 	check(r.code in [200, 400, 404], "an absolute URL doesn't crash anything (%d)" % r.code)
 	srv.http.debug_peer_override = "8.8.8.8"

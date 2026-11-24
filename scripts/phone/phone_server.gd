@@ -659,9 +659,9 @@ func hello_asker(req: Dictionary) -> Dictionary:
 
 ## Headers for the pages Polox writes itself (launcher, /hello, /app): their scripts and styles are
 ## inline, they talk only to this address, and nothing may frame them or load anything from elsewhere.
+## (No Cross-Origin-Opener-Policy: browsers ignore it on plain HTTP and log an error saying so.)
 const PAGE_HEADERS := {
 	"Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-	"Cross-Origin-Opener-Policy": "same-origin",
 }
 
 
