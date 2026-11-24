@@ -89,10 +89,81 @@ static func sign_with_hash(token_sha256: String, method: String, signed_target: 
 
 ## The whole header line for a request ("Authorization: Polox-Sig ...").
 static func header(token: String, method: String, url: String, body: PackedByteArray = PackedByteArray()) -> String:
+	return str(signed(token, method, url, body).header)
+
+
+## The header line and the nonce in it (verify_response needs the nonce): {header, nonce}.
+static func signed(token: String, method: String, url: String, body: PackedByteArray = PackedByteArray()) -> Dictionary:
 	var ts := now()
 	var nonce := Crypto.new().generate_random_bytes(16).hex_encode()
 	var sig := sign_with_hash(HttpUtil.sha256_bytes(token.to_utf8_buffer()), method, target(url), ts, nonce, HttpUtil.sha256_bytes(body))
-	return "Authorization: %s v=%d,ts=%d,nonce=%s,sig=%s" % [SCHEME, VERSION, ts, nonce, sig]
+	return {"header": "Authorization: %s v=%d,ts=%d,nonce=%s,sig=%s" % [SCHEME, VERSION, ts, nonce, sig], "nonce": nonce}
+
+
+# --- The PC's answers to signed requests -----------------------------------------------------------
+## X-Polox-Sig: v=1,sig=<64 hex>, sig = HMAC-SHA256(SHA-256(token), "polox-resp|1|<request nonce>|<status>|<SHA-256 hex of body>")
+## Tied to the request's nonce, so an answer can't be moved to another request. Every answer to a request
+## the PC accepted is signed; a phone takes no 2xx answer without a good signature (checks before auth,
+## 401 and 403, can't be signed: the PC doesn't know who is asking yet).
+
+const ANSWER_HEADER := "X-Polox-Sig"
+
+
+static func answer_sig(token_sha256: String, nonce: String, status: int, body: PackedByteArray) -> String:
+	var key := token_sha256.hex_decode()
+	if key.size() != 32:
+		return ""
+	var sig := _hmac(key, "polox-resp|%d|%s|%d|%s" % [VERSION, nonce, status, HttpUtil.sha256_bytes(body)])
+	key.fill(0)
+	return sig
+
+
+## The PC's side: the same response with its X-Polox-Sig header added.
+static func sign_answer(response: PackedByteArray, token_sha256: String, nonce: String) -> PackedByteArray:
+	var end := HttpUtil.header_end(response)
+	if end < 0:
+		return response
+	var head := response.slice(0, end).get_string_from_utf8()
+	var status := head.get_slice("\r\n", 0).get_slice(" ", 1).to_int()
+	var body := response.slice(end + 4)
+	var out := ("%s\r\n%s: v=%d,sig=%s\r\n\r\n" % [head, ANSWER_HEADER, VERSION, answer_sig(token_sha256, nonce, status, body)]).to_utf8_buffer()
+	out.append_array(body)
+	return out
+
+
+## Paths whose answers a signing phone must see signed: every /api/ endpoint that needs a key, and
+## /hello.json (the PC's other addresses). /api/pairing, /api/pair and /api/report need no key, so their
+## answers can't be signed; neither are /app/ and the game files.
+static func answer_required(url: String) -> bool:
+	var path := url
+	var scheme_end := path.find("://")
+	if scheme_end >= 0:
+		var slash := path.find("/", scheme_end + 3)
+		path = path.substr(slash) if slash >= 0 else "/"
+	path = path.get_slice("?", 0)
+	if path in ["/api/pairing", "/api/pair", "/api/report"]:
+		return false
+	return path.begins_with("/api/") or path == "/hello.json"
+
+
+## The phone's side. `headers`: the answer's headers, as HTTPRequest gives them ("Name: value" lines).
+## True for a good signature; a 4xx without one is taken as a plain error, a 2xx without one never.
+static func verify_answer(token: String, nonce: String, status: int, headers: PackedStringArray, body: PackedByteArray) -> bool:
+	var value := ""
+	for line in headers:
+		if line.to_lower().begins_with(ANSWER_HEADER.to_lower() + ":"):
+			value = line.substr(line.find(":") + 1).strip_edges()
+	if value == "":
+		return status >= 400
+	var fields := {}
+	for part in value.split(",", false):
+		var eq := part.find("=")
+		if eq > 0:
+			fields[part.substr(0, eq).strip_edges().to_lower()] = part.substr(eq + 1).strip_edges().to_lower()
+	if str(fields.get("v", "")) != str(VERSION) or not _lower_hex(str(fields.get("sig", "")), 64):
+		return false
+	var expected := answer_sig(HttpUtil.sha256_bytes(token.to_utf8_buffer()), nonce, status, body)
+	return expected != "" and HttpUtil.constant_time_equals(expected, str(fields.sig))
 
 
 ## {ts, nonce, sig} from an Authorization value, or {} when it isn't a well-formed Polox-Sig v1.

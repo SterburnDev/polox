@@ -28,6 +28,7 @@ const SyncFiles := preload("res://scripts/phone/sync_files.gd")
 const JsonUtil := preload("res://scripts/core/json_util.gd")
 const Slots := preload("res://scripts/core/slots.gd")
 const ExportInbox := preload("res://scripts/phone/export_inbox.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 const SNAPSHOT_EVERY_S := 600.0     # at most one before-sync snapshot per slot per 10 minutes
 const AI_OPTS: PackedStringArray = ["max_tokens", "json", "temperature", "mock", "model"]   # model: a friend's own
@@ -126,6 +127,13 @@ func handle(req: Dictionary, ip: String) -> PackedByteArray:
 		_last_touch = Time.get_unix_time_from_system()
 		server.pairing.touch(str(device.id))
 	device["_host_now"] = str(req.headers.get("host", ""))
+	var answer: PackedByteArray = await _answer(path, req, device, ip)
+	if auth.has("nonce"):   # a signed request: the answer is signed back, tied to that request's nonce
+		answer = RequestSig.sign_answer(answer, str(device.get("token_sha256", "")), str(auth.nonce))
+	return answer
+
+
+func _answer(path: String, req: Dictionary, device: Dictionary, ip: String) -> PackedByteArray:
 	match path:
 		"/api/status":
 			return _status(device)

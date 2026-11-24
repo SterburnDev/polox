@@ -784,7 +784,7 @@ func _check_signature_locked(req: Dictionary, auth: String) -> Dictionary:
 		audit("sig_busy nonces=%d" % _sig_nonces.size())
 		return {"busy": true}
 	_sig_nonces[fields.nonce] = now_s + RequestSig.WINDOW_S * 2.0   # outlives every time the window accepts
-	return {"device": found}
+	return {"device": found, "nonce": fields.nonce}   # (a signed request: the answer is signed back)
 
 
 func _prune_nonces_locked(now_s: float) -> void:

@@ -38,6 +38,7 @@ const Announcer := preload("res://scripts/phone/announcer.gd")
 const AppPage := preload("res://scripts/phone/app_page.gd")
 const AndroidApp := preload("res://scripts/phone/android_app.gd")
 const ExportInbox := preload("res://scripts/phone/export_inbox.gd")
+const RequestSig := preload("res://scripts/phone/request_sig.gd")
 
 ## A fixed, browser-safe port (Chrome refuses some ports with ERR_UNSAFE_PORT,
 ## so never a random one), remembered; if it's taken, the next one on this list.
@@ -639,11 +640,52 @@ static func is_pc_itself(req: Dictionary) -> bool:
 ## /hello.json in full: a request from this PC itself (not through Tailscale Serve or the bundled
 ## server, which both arrive from 127.0.0.1 too), or one a paired phone signed (or sent its old-way key with).
 func hello_in_full(req: Dictionary) -> bool:
+	return bool(hello_asker(req).full)
+
+
+## Who asks for /hello.json: {full} and, for a signed request, {token_sha256, nonce} to sign the answer with.
+func hello_asker(req: Dictionary) -> Dictionary:
 	var headers: Dictionary = req.get("headers", {})
 	var forwarded := headers.has("x-forwarded-for") or headers.has("tailscale-user-login") or bool(req.get("proxied", false))
-	if NetRules.kind(str(req.get("ip", ""))) == "loopback" and not forwarded:
+	if NetRules.kind(str(req.get("ip", ""))) == "loopback" and not forwarded and not str(headers.get("authorization", "")).begins_with(RequestSig.SCHEME):
+		return {"full": true}
+	var auth: Dictionary = pairing.authenticate(req) if pairing != null else {}
+	if not auth.has("device"):
+		return {"full": NetRules.kind(str(req.get("ip", ""))) == "loopback" and not forwarded}
+	if auth.has("nonce"):
+		return {"full": true, "token_sha256": str(auth.device.get("token_sha256", "")), "nonce": str(auth.nonce)}
+	return {"full": true}
+
+
+## Headers for the pages Polox writes itself (launcher, /hello, /app): their scripts and styles are
+## inline, they talk only to this address, and nothing may frame them or load anything from elsewhere.
+const PAGE_HEADERS := {
+	"Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+	"Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+## [PAIRING] DNS rebinding: a web page somewhere could point its own name at this PC (127.0.0.1 or a
+## home address) and then read Phone Link as if it were that page. Such a name always ends in a public
+## domain, so only these Hosts are served: no Host, an IP address, a name without a dot (localhost, the
+## PC's name), names under local-only suffixes (the home router's .lan, .fritz.box...), and Tailscale's
+## ts.net. (Not the PC's name under a public domain: a page that knows the name could use it.)
+const LOCAL_SUFFIXES := [".local", ".lan", ".home", ".home.arpa", ".internal", ".localdomain", ".localhost", ".box", ".ts.net"]
+
+
+static func host_allowed(host_header: String) -> bool:
+	var host := host_header.strip_edges().to_lower()
+	if host == "":
 		return true
-	return pairing != null and pairing.request_is_paired(req)
+	if host.begins_with("["):
+		return host.contains("]")   # an IPv6 address
+	var name := host.get_slice(":", 0).trim_suffix(".")
+	if name.is_valid_ip_address() or not name.contains("."):
+		return true
+	for suffix: String in LOCAL_SUFFIXES:
+		if name.ends_with(suffix):
+			return true
+	return false
 
 
 func _page(req: Dictionary) -> Variant:
@@ -654,15 +696,19 @@ func _page(req: Dictionary) -> Variant:
 		return diag
 	match path:
 		"/hello":
-			return HttpUtil.response(200, HelloPage.html(info).to_utf8_buffer(), "text/html; charset=utf-8")
+			return HttpUtil.response(200, HelloPage.html(info).to_utf8_buffer(), "text/html; charset=utf-8", PAGE_HEADERS)
 		"/hello.json":
 			# The addresses (and the rest) only for this PC itself or a paired phone; anyone else on the
 			# network learns that Polox is here and its name, which finding the PC needs anyway.
-			return HttpUtil.response(200, HelloPage.json(info, hello_in_full(req)).to_utf8_buffer(), "application/json")
+			var asker := hello_asker(req)
+			var hello := HttpUtil.response(200, HelloPage.json(info, bool(asker.full)).to_utf8_buffer(), "application/json")
+			if asker.has("nonce"):
+				hello = RequestSig.sign_answer(hello, str(asker.token_sha256), str(asker.nonce))
+			return hello
 		"/", "/pair", "/pair.html", "/worlds":
-			return HttpUtil.response(200, LauncherPage.html(info, is_pc_itself(req)).to_utf8_buffer(), "text/html; charset=utf-8")
+			return HttpUtil.response(200, LauncherPage.html(info, is_pc_itself(req)).to_utf8_buffer(), "text/html; charset=utf-8", PAGE_HEADERS)
 		"/app", "/app/":
-			return HttpUtil.response(200, AppPage.html(info, info.get("apk", {})).to_utf8_buffer(), "text/html; charset=utf-8")
+			return HttpUtil.response(200, AppPage.html(info, info.get("apk", {})).to_utf8_buffer(), "text/html; charset=utf-8", PAGE_HEADERS)
 		"/app/version.json":
 			return HttpUtil.response(200, AppPage.version_json(info.get("apk", {})).to_utf8_buffer(), "application/json")
 		"/app/polox.apk":
@@ -692,6 +738,8 @@ func _apk_download(apk: Dictionary) -> Variant:
 func _guard(req: Dictionary, ip: String) -> String:
 	var login := str(page_info().get("login", ""))
 	var h: Dictionary = req.headers
+	if not host_allowed(str(h.get("host", ""))):
+		return "That name isn't this PC's: open Polox by the address on the PC's Phone Link screen."
 	if bool(req.get("proxied", false)) and not h.has("tailscale-user-login"):
 		return ""   # a phone on the home network through the bundled web server (it refused strangers)
 	if login == "" or (NetRules.kind(ip) != "loopback" and not bool(req.get("proxied", false))):
