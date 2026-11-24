@@ -60,5 +60,7 @@ if (-not $AcceptLicenses) { Write-Host "Stopping before the SDK packages: run ag
 Write-Host "Installing the SDK packages (the Android SDK License Agreement was accepted by the user)..."
 & cmd /c "`"$(Join-Path $Tools 'android_sdk_install.cmd')`" $(if ($Emulator) { 'emulator' } else { '' })"
 if ($LASTEXITCODE -ne 0) { throw "The SDK package install failed ($LASTEXITCODE)." }
+# Keep Godot's importer out of the toolchains (see keep_out_of_godot in tools\build_engine.py).
+foreach ($d in 'jdk17', 'android-sdk', 'android-home', 'downloads') { $p = Join-Path $Tools $d; if (Test-Path $p) { New-Item -ItemType File -Force -Path (Join-Path $p '.gdignore') | Out-Null } }
 Write-Host "Done: adb at tools\android-sdk\platform-tools\adb.exe"
 exit 0

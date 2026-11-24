@@ -310,12 +310,28 @@ def build_windows():
 BUILDERS = {"android": build_android, "web": build_web, "windows": build_windows}
 
 
+## Toolchain folders inside the project: Godot must never import them. Without a .gdignore, the next
+## `--import` (check.bat, a test run, the editor) writes .import/.uid files next to the engine source's
+## pictures and shaders, and Gradle then refuses the engine's own res/ folder ("must end with .xml or .png").
+TOOL_FOLDERS = ("godot-src", "engine", "emsdk", "llvm-mingw", "jdk17", "android-sdk", "android-home", "gradle-home",
+                "pyenv", "downloads", "innosetup", "gitleaks", "android", "server")
+
+
+def keep_out_of_godot():
+    for name in TOOL_FOLDERS:
+        folder = os.path.join(TOOLS, name)
+        if os.path.isdir(folder) and not os.path.exists(os.path.join(folder, ".gdignore")):
+            open(os.path.join(folder, ".gdignore"), "w").close()
+
+
 def main(argv):
     targets = argv or list(BUILDERS)
     unknown = [t for t in targets if t not in BUILDERS]
     if unknown:
         raise BuildError("Unknown platform(s): %s (use %s)." % (", ".join(unknown), ", ".join(BUILDERS)))
+    keep_out_of_godot()
     ensure_source()
+    keep_out_of_godot()
     check_game(removed_classes())
     info_path = os.path.join(OUT, "build_info.json")
     info = json.load(open(info_path)) if os.path.isfile(info_path) else {}
