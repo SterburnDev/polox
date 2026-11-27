@@ -69,7 +69,7 @@ func _page_world() -> Control:
 	_player_name = UiKit.line_edit("What should friends call you?")
 	_player_name.text_submitted.connect(func(_t): _show(1))
 	p.add_child(UiKit.field_row("Your name", _player_name, 200))
-	p.add_child(UiKit.para("Everything you share is optional and stays on this device. Nothing leaves it unless you connect something yourself: cloud sync (like Google Drive) or an online AI in Settings.", 18, ThemeBuilder.MUTED))
+	p.add_child(UiKit.para("You don't have to do the Light World sequence — you can skip it anytime and use a template. Everything stays on this device (no accounts, no servers, no telemetry) unless you use a cloud service (like Google Drive) or an online AI in Settings.", 18, ThemeBuilder.MUTED))
 	p.add_child(_nav([["Back", func(): cancelled.emit()], ["Next", func(): _show(1)]]))
 	return p
 

@@ -759,5 +759,9 @@ func forget() -> void:
 
 ## Only http(s) pages open from research or synced home files (never a file, program or other link kind).
 static func _web_url(url: String) -> bool:
-	var u := url.strip_edges().to_lower()
+	var raw := url.strip_edges()
+	for bad in [" ", "\t", "\r", "\n"]:
+		if raw.contains(bad):
+			return false
+	var u := raw.to_lower()
 	return u.begins_with("https://") or u.begins_with("http://")

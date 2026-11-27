@@ -12,8 +12,8 @@ config_version=5
 
 config/name="Polox"
 config/description="A cozy, local-only, one-handed life-sim about your own little dream world."
-config/version="1.0.1"
-config/release_label="Polox Public Beta 1.01"
+config/version="1.0.2"
+config/release_label="Polox Public Beta 1.02"
 run/main_scene="res://scenes/main.tscn"
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/image="res://assets/icon/polox_splash.png"

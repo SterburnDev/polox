@@ -62,9 +62,8 @@ def main():
     out = Path(args.out)
     out = (out if out.is_absolute() else PROJECT_ROOT / out).resolve()
     private_pack = root / "assets" / "local"
-    if args.flavor == "public" and private_pack.exists():
-        sys.exit(f"{root} has assets/local/: a public build must come from a tree without the private pack "
-                 "(tools/release/make_public_source.py makes one).")
+    if args.flavor == "public" and ((private_pack / "secret").exists() or (private_pack / "addons").exists()):
+        sys.exit(f"{root} has assets/local/secret/ or assets/local/addons/: a public build must not include private secret vault images or add-ons.")
     if args.flavor == "private" and not (private_pack / "addon.json").is_file():
         sys.exit(f"{root} has no assets/local/addon.json: there is nothing private to build.")
     if not GODOT.is_file():

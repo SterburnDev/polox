@@ -50,10 +50,10 @@ EXIF, XMP or PNG text chunks.
 
 | Asset | Where | Why it is private | In private builds |
 | --- | --- | --- | --- |
-| The owner's soundtrack: five MP3s from commercial games and artists | `assets/local/music/` | Commercial recordings; fine for the owner's own copy, not redistributable | Yes: the default music |
-| Mochi, the Soul picture | `assets/local/pictures/mochi.png` | Source and rights unconfirmed | Yes: the default Soul |
-| The owner's Music-secret pictures (8 JPEGs) | `assets/local/secret/` | Collected from elsewhere; authors unknown | Yes: listed under `secret_images` |
-| UTDR Theme: 24 songs from UNDERTALE and DELTARUNE, and their names for things | `assets/local/addons/utdr-theme/` (the editable copy is `local-addons/utdr-theme/`) | Commercial soundtrack recordings and another game's names | Yes, as an optional add-on, off by default |
+| Soundtrack (5 separate cues: Light World creation, Title menu, Dream World, Battle, Light World) | `assets/local/music/` + `assets/local/addon.json` | Built-in soundtrack overrides (toggleable back to Polox's procedural tunes via *Polox Originals*) | Ships in 1.02+ builds |
+| Mochi, the Soul picture | `assets/local/pictures/mochi.png` | Built-in Soul sprite across Title, Survey, and Battles (toggleable back to Dream Drop via *Polox Originals*) | Ships in 1.02+ builds |
+| The owner's Music-secret pictures (8 JPEGs) | `assets/local/secret/` | Collected from elsewhere; authors unknown | Yes, private only: git-ignored and excluded from public builds |
+| UTDR Theme: 24 songs from UNDERTALE and DELTARUNE, and their names for things | `assets/local/addons/utdr-theme/` (the editable copy is `local-addons/utdr-theme/`) | Commercial soundtrack recordings and another game's names | Yes, private only: git-ignored and excluded from public builds |
 | An older song folder | `assets/music/` | Commercial recordings from before add-ons existed | No: excluded by every export preset |
 | Screenshots on the private Hub's page | `storefront/images/` | May show the owner's real home and street as mapped in the Light World | Not in any build; left out of the public snapshot |
 | Everything a player makes | `PersonalData/` | It is the player's | Never: no export includes it |

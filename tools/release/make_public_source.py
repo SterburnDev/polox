@@ -60,8 +60,10 @@ TEXT_CHECKS = (
     ("e-mail address", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
     ("Tailscale name", re.compile(r"\b[a-z0-9-]+\.tail(?!0+\b)[0-9a-f]{4,}\.ts\.net\b", re.I)),
     ("user folder", re.compile(r"\b[A-Za-z]:(?:\\\\|\\|/)Users(?:\\\\|\\|/)([^\\/\"'<>\s`,;:)\]]+)", re.I)),
-    ("key", re.compile(r"\b(sk-(?!ant-test-)[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{30,}|gh[pousr]_[A-Za-z0-9]{30,}|"
-                       r"github_pat_[A-Za-z0-9_]{30,}|xox[abp]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|tskey-[a-z]+-[A-Za-z0-9-]{10,})")),
+    ("key", re.compile(r"\b(sk-(?!ant-test-)[A-Za-z0-9_-]{20,}|gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|"
+                       r"AQ\.[A-Za-z0-9_.-]{20,}|VENICE-[A-Za-z0-9_-]{16,}|hf_[A-Za-z0-9]{25,}|xai-[A-Za-z0-9_-]{20,}|"
+                       r"gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|xox[abp]-[A-Za-z0-9-]{10,}|"
+                       r"AKIA[0-9A-Z]{16}|tskey-[a-z]+-[A-Za-z0-9-]{10,})")),
     ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
 )
 # Addresses every PC with the same software has, so they identify nobody: VirtualBox's host-only adapter.

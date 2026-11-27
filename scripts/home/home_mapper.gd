@@ -54,14 +54,19 @@ func run(main_node: Node) -> String:
 		var res: Dictionary = screen_queue.pop_front()
 		last_result = res
 		if str(res.choice) == "skipped":
-			LightHome.defer_survey()
-			await screen.farewell("...ANOTHER TIME, THEN.")
+			var tpl_id := str(res.get("template", ""))
+			var e := LightHome.apply_template(tpl_id) if tpl_id != "" else ""
+			if e == "":
+				LightHome.defer_survey()
+				await screen.farewell("...ANOTHER TIME, THEN.")
+				e = LightHome.ensure_entry()
+			else:
+				await screen.farewell("YOUR TEMPLATE HOME IS READY.")
 			if is_instance_valid(screen):
 				screen.remove_from_group("survey_flow")
 				screen.hide()
 				screen.queue_free()
-			var e := LightHome.ensure_entry()
-			mapped.emit("")
+			mapped.emit(e)
 			return e
 		_generation += 1
 		var ticket := _generation

@@ -166,17 +166,25 @@ def check(packed, flavor, root, build_id):
         problems.append(f"{len(missing)} expected path(s) missing, e.g. {missing[0]}")
 
     in_private_pack = {p for p in paths if p.startswith(PRIVATE_PACK + "/")}
-    if flavor == "public":
+    public_addon = (root / PRIVATE_PACK / "addon.json").is_file()
+    if flavor == "public" and not public_addon:
         if in_private_pack:
             problems.append(f"{len(in_private_pack)} path(s) from the private pack, e.g. {sorted(in_private_pack)[0]}")
         leaked = every_private_import(root) & paths
         if leaked:
             problems.append(f"{len(leaked)} imported cop(ies) of private files, e.g. {sorted(leaked)[0]}")
     else:
+        if flavor == "public":
+            for forbidden in (f"{PRIVATE_PACK}/secret/", f"{PRIVATE_PACK}/addons/"):
+                bad = sorted(p for p in in_private_pack if p.startswith(forbidden))
+                if bad:
+                    problems.append(f"{len(bad)} private path(s) in public build, e.g. {bad[0]}")
         media = private_media(root)
         if not media:
-            problems.append("a private build needs assets/local/ and its addon.json in the source tree")
+            problems.append(f"a {flavor} build needs assets/local/ and its addon.json in the source tree")
         allowed = {m for m in PRIVATE_MANIFESTS if (root / m).is_file()}
+        if flavor == "public":
+            allowed = {f"{PRIVATE_PACK}/addon.json"}
         allowed_copies = set()
         for source in media:
             names = packed_names_for(root, source)
@@ -184,14 +192,14 @@ def check(packed, flavor, root, build_id):
             allowed_copies |= {n for n in names if not n.startswith(PRIVATE_PACK + "/")}
         if in_private_pack != allowed:
             extra, lacking = sorted(in_private_pack - allowed), sorted(allowed - in_private_pack)
-            problems.append("the private pack's contents differ from its manifests: %d extra%s, %d missing%s" % (
+            problems.append("the built-in pack's contents differ from its manifests: %d extra%s, %d missing%s" % (
                 len(extra), f" (e.g. {extra[0]})" if extra else "", len(lacking), f" (e.g. {lacking[0]})" if lacking else ""))
         unlisted = (every_private_import(root) - allowed_copies) & paths
         if unlisted:
             problems.append(f"{len(unlisted)} imported cop(ies) of unlisted private files, e.g. {sorted(unlisted)[0]}")
         missing_copies = sorted(allowed_copies - paths)
         if missing_copies:
-            problems.append(f"{len(missing_copies)} listed private file(s) not in the pack, e.g. {missing_copies[0]}")
+            problems.append(f"{len(missing_copies)} listed built-in file(s) not in the pack, e.g. {missing_copies[0]}")
 
     if build_id and "build_id.txt" in paths:
         packed_id = packed.read("build_id.txt").decode("utf-8").strip()

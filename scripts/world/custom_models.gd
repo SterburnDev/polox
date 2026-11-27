@@ -10,6 +10,11 @@ extends RefCounted
 
 const EXTS: PackedStringArray = ["glb", "gltf", "obj"]
 const MAX_MODEL_BYTES := 24 * 1024 * 1024
+const MAX_GLTF_NODES := 512
+const MAX_VERTICES := 200000
+const MAX_INDICES := 600000
+const MAX_OBJ_TRIANGLES := 200000
+const MAX_ACCESSOR_STRIDE := 256
 const TARGET_SPAN := 0.92   # Fits neatly inside a 1.0 m cell without clipping neighbouring walls.
 
 const GLB_MAGIC := 0x46546C67        # "glTF"
@@ -224,7 +229,7 @@ static func parse_gltf_dict(doc: Dictionary, bin_chunk: PackedByteArray, base_di
 			for idx in nodes_def.size():
 				root_indices.append(idx)
 		for idx in root_indices:
-			var child := _build_gltf_node(int(idx), nodes_def, built_meshes, 0)
+			var child := _build_gltf_node(int(idx), nodes_def, built_meshes, 0, {"nodes": 0}, {})
 			if child:
 				root.add_child(child)
 				added_any = true
@@ -248,6 +253,7 @@ static func _resolve_gltf_buffers(buffers_def: Variant, bin_chunk: PackedByteArr
 	var out: Array = []
 	if not buffers_def is Array:
 		return out
+	var total_bytes := 0
 	for i in (buffers_def as Array).size():
 		var entry: Variant = (buffers_def as Array)[i]
 		if not entry is Dictionary:
@@ -255,16 +261,28 @@ static func _resolve_gltf_buffers(buffers_def: Variant, bin_chunk: PackedByteArr
 			continue
 		var uri := str((entry as Dictionary).get("uri", ""))
 		if uri == "":
-			out.append(bin_chunk if i == 0 else PackedByteArray())
+			if bin_chunk.size() <= MAX_MODEL_BYTES and total_bytes + bin_chunk.size() <= MAX_MODEL_BYTES:
+				total_bytes += bin_chunk.size()
+				out.append(bin_chunk if i == 0 else PackedByteArray())
+			else:
+				out.append(PackedByteArray())
 		elif uri.begins_with("data:"):
 			var comma := uri.find(",")
-			out.append(Marshalls.base64_to_raw(uri.substr(comma + 1)) if comma >= 0 else PackedByteArray())
+			if comma >= 0 and uri.length() - comma - 1 <= (MAX_MODEL_BYTES * 4) / 3 + 128:
+				var decoded := Marshalls.base64_to_raw(uri.substr(comma + 1))
+				if total_bytes + decoded.size() <= MAX_MODEL_BYTES:
+					total_bytes += decoded.size()
+					out.append(decoded)
+					continue
+			out.append(PackedByteArray())
 		elif base_dir != "" and not uri.contains("..") and not uri.contains("/") and not uri.contains("\\") and not uri.contains(":"):
 			var bin_path := base_dir.path_join(uri)
 			if FileAccess.file_exists(bin_path):
 				var f := FileAccess.open(bin_path, FileAccess.READ)
-				if f and f.get_length() <= MAX_MODEL_BYTES:
-					out.append(f.get_buffer(f.get_length()))
+				if f and f.get_length() <= MAX_MODEL_BYTES and total_bytes + f.get_length() <= MAX_MODEL_BYTES:
+					var buf := f.get_buffer(f.get_length())
+					total_bytes += buf.size()
+					out.append(buf)
 					f.close()
 					continue
 				if f:
@@ -367,9 +385,13 @@ static func _build_gltf_mesh(mesh_def: Dictionary, accessors: Array, views: Arra
 	return mesh if added_surface else null
 
 
-static func _build_gltf_node(idx: int, nodes_def: Array, meshes: Array, depth: int) -> Node3D:
+static func _build_gltf_node(idx: int, nodes_def: Array, meshes: Array, depth: int, state: Dictionary = {}, ancestors: Dictionary = {}) -> Node3D:
 	if depth > 24 or idx < 0 or idx >= nodes_def.size() or not nodes_def[idx] is Dictionary:
 		return null
+	if ancestors.has(idx) or int(state.get("nodes", 0)) >= MAX_GLTF_NODES:
+		return null
+	state["nodes"] = int(state.get("nodes", 0)) + 1
+	ancestors[idx] = true
 	var nd := nodes_def[idx] as Dictionary
 	var node: Node3D
 	var mesh_idx := int(nd.get("mesh", -1))
@@ -384,9 +406,10 @@ static func _build_gltf_node(idx: int, nodes_def: Array, meshes: Array, depth: i
 	var children: Variant = nd.get("children", [])
 	if children is Array:
 		for child_idx in children as Array:
-			var child := _build_gltf_node(int(child_idx), nodes_def, meshes, depth + 1)
+			var child := _build_gltf_node(int(child_idx), nodes_def, meshes, depth + 1, state, ancestors)
 			if child:
 				node.add_child(child)
+	ancestors.erase(idx)
 	return node
 
 
@@ -416,7 +439,7 @@ static func _gltf_node_transform(nd: Dictionary) -> Transform3D:
 	return Transform3D(Basis(q).scaled(s), t)
 
 
-static func _accessor_span(acc_idx: int, accessors: Array, views: Array, buffers: Array, default_stride: int) -> Dictionary:
+static func _accessor_span(acc_idx: int, accessors: Array, views: Array, buffers: Array, default_stride: int, max_count: int = MAX_VERTICES) -> Dictionary:
 	if acc_idx < 0 or acc_idx >= accessors.size() or not accessors[acc_idx] is Dictionary:
 		return {}
 	var acc := accessors[acc_idx] as Dictionary
@@ -431,11 +454,17 @@ static func _accessor_span(acc_idx: int, accessors: Array, views: Array, buffers
 	var stride := int(bv.get("byteStride", 0))
 	if stride <= 0:
 		stride = default_stride
+	if stride < default_stride or stride > MAX_ACCESSOR_STRIDE:
+		return {}
+	var offset := int(bv.get("byteOffset", 0)) + int(acc.get("byteOffset", 0))
+	var count := int(acc.get("count", 0))
+	if offset < 0 or count <= 0 or count > max_count:
+		return {}
 	return {
 		"buf": buf,
-		"offset": int(bv.get("byteOffset", 0)) + int(acc.get("byteOffset", 0)),
+		"offset": offset,
 		"stride": stride,
-		"count": int(acc.get("count", 0)),
+		"count": count,
 		"comp": int(acc.get("componentType", 0)),
 	}
 
@@ -484,7 +513,7 @@ static func _read_index_accessor(acc_idx: int, accessors: Array, views: Array, b
 	var elem_bytes := 1 if comp == COMP_U8 else (2 if comp == COMP_U16 else (4 if comp == COMP_U32 else 0))
 	if elem_bytes == 0:
 		return out
-	var span := _accessor_span(acc_idx, accessors, views, buffers, elem_bytes)
+	var span := _accessor_span(acc_idx, accessors, views, buffers, elem_bytes, MAX_INDICES)
 	if span.is_empty():
 		return out
 	var buf: PackedByteArray = span.buf
@@ -550,12 +579,18 @@ static func parse_obj_text(text: String) -> ArrayMesh:
 		match parts[0]:
 			"v":
 				if parts.size() >= 4:
+					if positions.size() >= MAX_VERTICES:
+						return null
 					positions.append(Vector3(parts[1].to_float(), parts[2].to_float(), parts[3].to_float()))
 			"vt":
 				if parts.size() >= 3:
+					if uvs.size() >= MAX_VERTICES:
+						return null
 					uvs.append(Vector2(parts[1].to_float(), 1.0 - parts[2].to_float()))
 			"vn":
 				if parts.size() >= 4:
+					if normals.size() >= MAX_VERTICES:
+						return null
 					normals.append(Vector3(parts[1].to_float(), parts[2].to_float(), parts[3].to_float()).normalized())
 			"f":
 				if parts.size() < 4:
@@ -567,6 +602,8 @@ static func parse_obj_text(text: String) -> ArrayMesh:
 						face_verts.append(parsed)
 				# Fan triangulation for triangles, quads, and convex polygons.
 				for k in range(1, face_verts.size() - 1):
+					if tri_count >= MAX_OBJ_TRIANGLES:
+						return null
 					for corner in [face_verts[0], face_verts[k], face_verts[k + 1]]:
 						var vi: int = corner[0]
 						var ti: int = corner[1]

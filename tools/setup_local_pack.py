@@ -16,6 +16,7 @@ Example:
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -27,20 +28,31 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
 CUES = ("survey", "menu", "dark", "battle", "light")
 
 
-def copy_asset(source: str, target_dir: Path, allowed_exts: set, rename_to: str = "") -> str:
+def safe_slug(stem: str) -> str:
+    """Sanitizes a file stem to lowercase ASCII `a-z0-9_` for cross-platform export safety."""
+    slug = re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
+    return slug or "track"
+
+
+def copy_asset(source: str, target_dir: Path, allowed_exts: set, rename_to: str = "", sanitize: bool = False) -> str:
     src = Path(source).expanduser().resolve()
     if not src.is_file():
         sys.exit(f"File not found: {src}")
     if src.suffix.lower() not in allowed_exts:
         sys.exit(f"Unsupported file type for {src.name} (expected: {', '.join(sorted(allowed_exts))})")
     target_dir.mkdir(parents=True, exist_ok=True)
-    dest_name = rename_to if rename_to else src.name
+    if rename_to:
+        dest_name = rename_to
+    elif sanitize:
+        dest_name = f"{safe_slug(src.stem)}{src.suffix.lower()}"
+    else:
+        dest_name = src.name
     shutil.copy2(src, target_dir / dest_name)
     return dest_name
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Install git-ignored local overrides into assets/local/.")
+    parser = argparse.ArgumentParser(description="Install local overrides into assets/local/.")
     parser.add_argument("--survey", default="", help="Light World creation soundtrack file")
     parser.add_argument("--menu", default="", help="Title menu soundtrack file")
     parser.add_argument("--dark", default="", help="Dream World soundtrack file")
@@ -48,6 +60,7 @@ def main() -> None:
     parser.add_argument("--light", default="", help="Light World soundtrack file")
     parser.add_argument("--soul", default="", help="Custom Soul image (e.g. PNG)")
     parser.add_argument("--secret-dir", default="", help="Folder of built-in secret vault images")
+    parser.add_argument("--sanitize-names", action="store_true", help="Rename copied tracks to safe ASCII slugs while keeping original titles")
     args = parser.parse_args()
 
     music_overrides = {}
@@ -57,15 +70,18 @@ def main() -> None:
         given = getattr(args, cue)
         if not given:
             continue
-        copied = copy_asset(given, music_dir, AUDIO_EXTS)
+        src_stem = Path(given).stem
+        copied = copy_asset(given, music_dir, AUDIO_EXTS, sanitize=args.sanitize_names)
         rel = f"music/{copied}"
         music_overrides[cue] = rel
-        songs.append({"file": rel, "title": Path(copied).stem, "from": "Local Soundtrack", "gain_db": 0.0})
+        songs.append({"file": rel, "title": src_stem, "from": "Built-in Soundtrack", "gain_db": 0.0})
 
     textures = {}
     if args.soul:
-        ext = Path(args.soul).suffix.lower()
-        copied = copy_asset(args.soul, LOCAL_ROOT / "pictures", IMAGE_EXTS, rename_to=f"soul{ext}")
+        src_path = Path(args.soul)
+        ext = src_path.suffix.lower()
+        target_name = f"{safe_slug(src_path.stem)}{ext}" if args.sanitize_names else f"soul{ext}"
+        copied = copy_asset(args.soul, LOCAL_ROOT / "pictures", IMAGE_EXTS, rename_to=target_name)
         textures["soul"] = f"pictures/{copied}"
 
     secret_images = []
@@ -87,8 +103,8 @@ def main() -> None:
         "format": 1,
         "id": "built-in",
         "name": "Local Soundtrack & Pack",
-        "version": "1.0.0",
-        "description": "Local built-in overrides (git-ignored). Polox Originals restores Polox's built-in tunes and Dream Drop.",
+        "version": "1.0.2",
+        "description": "Built-in soundtrack and Soul overrides. Polox Originals restores Polox's synthesized tunes and Dream Drop.",
         "overrides": {
             "music": music_overrides,
             "songs": songs,

@@ -37,6 +37,10 @@ func _ready() -> void:
 	map.name = "MapHome"
 	map.disabled = world == null
 	row.add_child(map)
+	var tpl := UiKit.button("Templates", func(): _pick_template(), 0)
+	tpl.name = "TemplateHome"
+	tpl.disabled = world == null
+	row.add_child(tpl)
 	var tell := UiKit.button("Tell Polox about home", func(): _tell(), 0)
 	tell.name = "TellHome"
 	tell.disabled = world == null or not HomeStore.exists()
@@ -46,7 +50,7 @@ func _ready() -> void:
 	forget.disabled = not DirAccess.dir_exists_absolute(HomeStore.dir())
 	row.add_child(forget)
 	v.add_child(row)
-	v.add_child(UiKit.para("Address, Survey answers and journal stay here. Paired phones share the house and streets.", 16, ThemeBuilder.MUTED))
+	v.add_child(UiKit.para("Stays on device; paired phones share house and streets.", 16, ThemeBuilder.MUTED))
 	var on_phone := CheckBox.new()
 	on_phone.text = "Share with phones"
 	on_phone.name = "HomeOnPhone"
@@ -194,6 +198,27 @@ func _map() -> void:
 		return
 	_close_settings()
 	await world.dark.map_home()
+
+
+func _pick_template() -> void:
+	if world == null:
+		return
+	var LightHome := preload("res://scripts/world/light_home.gd")
+	var Realms := preload("res://scripts/world/realms.gd")
+	var p: Control = load("res://scripts/ui/choice_panel.gd").new()
+	var opts: Array = []
+	for tpl in LightHome.TEMPLATES:
+		var tid := str(tpl.id)
+		opts.append(["%s — %s" % [str(tpl.name), str(tpl.desc)], func():
+			var entry := LightHome.apply_template(tid)
+			if Realms.is_light(world.room.data) or GameState.current_room_id.begins_with(Realms.PREFIX):
+				world.load_room(entry)
+			_status.text = _home_line()
+			GameState.notify("Done")
+		])
+	opts.append(["Cancel", func(): pass])
+	world.main.open_panel(p)
+	p.ask("Templates", "Skip sequence; stays on device.", opts)
 
 
 func _forget() -> void:

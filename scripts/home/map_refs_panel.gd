@@ -68,10 +68,14 @@ func setup_refs() -> void:
 			var l := UiKit.para(str(f.name) + source_tag, 16)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			r.add_child(l)
-			var gm_uri := str(f.get("maps_uri", ""))
-			var url := gm_uri if gm_uri.begins_with("https://") else osm_url(float(f.ll[0]), float(f.ll[1]))
-			r.add_child(UiKit.button("Google Maps" if gm_uri.begins_with("https://") else "Map", func(): OS.shell_open(url), 0))
-			v.add_child(r)
+			var gm_uri := safe_maps_url(str(f.get("maps_uri", "")))
+			var ll: Variant = f.get("ll")
+			var url := gm_uri
+			if url == "" and ll is Array and (ll as Array).size() >= 2:
+				url = osm_url(float(ll[0]), float(ll[1]))
+			if url != "":
+				r.add_child(UiKit.button("Google Maps" if gm_uri != "" else "Map", func(): OS.shell_open(url), 0))
+				v.add_child(r)
 	var prov := provenance()
 	v.add_child(UiKit.label("What your streets are made of", 20, ThemeBuilder.YELLOW))
 	v.add_child(UiKit.para("From the map: " + _words(prov.get("map", [])), 16))
@@ -168,6 +172,28 @@ static func street_view_url(lat: float, lon: float) -> String:
 
 
 ## {"map": [...], "filled": [...]} from your streets as built (any block carries it).
+## Accepts only clean HTTPS Google Maps links (rejects whitespace, control characters, and untrusted hosts).
+static func safe_maps_url(uri: String) -> String:
+	var u := uri.strip_edges()
+	if not u.begins_with("https://"):
+		return ""
+	for bad in [" ", "\t", "\r", "\n"]:
+		if u.contains(bad):
+			return ""
+	var after := u.substr(8)
+	var slash := after.find("/")
+	var q := after.find("?")
+	var end := after.length()
+	if slash >= 0:
+		end = mini(end, slash)
+	if q >= 0:
+		end = mini(end, q)
+	var host := after.substr(0, end).to_lower()
+	if host in ["maps.google.com", "www.google.com", "google.com", "maps.app.goo.gl"]:
+		return u
+	return ""
+
+
 static func provenance() -> Dictionary:
 	for id in SaveManager.list_light_rooms():
 		if str(id).begins_with("lw_hood_"):

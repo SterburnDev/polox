@@ -11,9 +11,10 @@ const WALL_SWATCHES := [["#f2efe8", "WHITE"], ["#efe6d8", "CREAM"], ["#c9c9c4", 
 const FLOORS := [["wood", "WOOD"], ["carpet", "CARPET"], ["tile", "TILE"], ["vinyl", "VINYL"]]
 
 const STEPS := [
-	{"id": "hello", "kind": "say", "lines": ["...", "HELLO.", "SOMETHING HERE HAS BEEN LISTENING FOR YOU.", "THERE IS A HOUSE THAT KNOWS YOUR FOOTSTEPS.", "HELP IT REMEMBER ITSELF.", "ANSWER WHAT YOU LIKE. SKIP WHAT YOU DON'T."]},
+	{"id": "hello", "kind": "say", "lines": ["...", "HELLO.", "SOMETHING HERE HAS BEEN LISTENING FOR YOU.", "THERE IS A HOUSE THAT KNOWS YOUR FOOTSTEPS.", "HELP IT REMEMBER ITSELF.", "ANSWER WHAT YOU LIKE. SKIP WHAT YOU DON'T."],
+		"hint": "Completely optional: press SKIP & USE A TEMPLATE above to skip this sequence and start in a ready-made home. Everything stays on your device unless you use a cloud service."},
 	{"id": "address", "kind": "text", "key": "address", "lines": ["WHERE DOES YOUR LIGHT WORLD BEGIN?"],
-		"hint": "A full address, a street, a city, or coordinates pasted from a map app. It stays on this computer unless you say otherwise.", "placeholder": "123 Example Street, Town"},
+		"hint": "Optional — or press SKIP & USE A TEMPLATE above. Everything stays on your device unless you connect a cloud service or online lookup.", "placeholder": "123 Example Street, Town"},
 	{"id": "home_type", "kind": "choice", "key": "home_type", "lines": ["WHAT KIND OF HOME IS IT?"],
 		"options": [["house", "A HOUSE"], ["apartment", "AN APARTMENT"], ["townhouse", "A TOWNHOUSE"], ["other", "SOMETHING ELSE"]]},
 	{"id": "floors", "kind": "choice", "key": "floors", "lines": ["HOW MANY FLOORS?"],

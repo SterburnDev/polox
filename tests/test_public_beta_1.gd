@@ -25,15 +25,15 @@ const SparringCatalog := preload("res://scripts/battle/sparring_catalog.gd")
 
 func test_version_label_and_title_secrets() -> void:
 	fresh_save_root()
-	eq(str(ProjectSettings.get_setting("application/config/release_label", "")), "Polox Public Beta 1.01", "release_label is Polox Public Beta 1.01")
+	eq(str(ProjectSettings.get_setting("application/config/release_label", "")), "Polox Public Beta 1.02", "release_label is Polox Public Beta 1.02")
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	tree.root.add_child(main)
 	await frames(3)
 	var ver := main.screen.find_child("VersionLabel", true, false) as Label
-	check(ver != null and ver.text == "Polox Public Beta 1.01", "title screen shows Polox Public Beta 1.01")
+	check(ver != null and ver.text == "Polox Public Beta 1.02", "title screen shows Polox Public Beta 1.02")
 	eq(main.screen.feed_title_secret("mochi"), "mochi", "typing mochi triggers title secret")
 	eq(main.screen.feed_title_secret("bramin"), "bramin", "typing bramin triggers title secret")
-	eq(Whimsy.version_quip(1), "Polox Public Beta 1.01 — freshly baked.", "first version click quip")
+	eq(Whimsy.version_quip(1), "Polox Public Beta 1.02 — freshly baked.", "first version click quip")
 	eq(Whimsy.version_quip(5).contains("sparkle"), true, "fifth click grants complimentary sparkle")
 	main.queue_free()
 	await frames(2)
@@ -256,3 +256,116 @@ func test_whimsy_rotating_inspects_and_battle_quips() -> void:
 	var encounter := SparringCatalog.raw("tide_parcel")
 	var idle: Array = encounter.enemies[0].lines.idle
 	check(idle.size() >= 2, "practice battles include humorous idle commentary")
+
+
+func test_light_world_templates_and_survey_skip_flow() -> void:
+	fresh_save_root()
+	var LightHome := preload("res://scripts/world/light_home.gd")
+	var Realms := preload("res://scripts/world/realms.gd")
+	var SurveyScreen := preload("res://scripts/home/survey_screen.gd")
+	eq(LightHome.TEMPLATES.size(), 4, "four Light World templates available")
+	for tpl in LightHome.TEMPLATES:
+		var tid := str(tpl.id)
+		var entry := LightHome.apply_template(tid)
+		check(entry != "" and SaveManager.room_exists(entry), "template %s creates entry room" % tid)
+		var r := SaveManager.load_room(entry)
+		eq(Realms.realm(r), Realms.LIGHT, "%s is in Light World" % tid)
+		check(not Realms.gate_of(r).is_empty(), "%s has Dream Gate back" % tid)
+		check(not LightHome.needs_survey(), "%s marks Survey skipped locally" % tid)
+		eq(LightHome.entry_id(), entry, "%s resolves as Light World entry" % tid)
+
+	# SurveyScreen shows prominent Skip & Use a Template banner and emits template choice.
+	GameState.settings["reduce_motion"] = true
+	var scr := SurveyScreen.new()
+	scr.available = {"none": true}
+	tree.root.add_child(scr)
+	await frames(2)
+	var skip_tpl := scr.find_child("SkipTemplate", true, false) as Button
+	check(skip_tpl != null and skip_tpl.visible, "prominent SKIP & USE A TEMPLATE button shown")
+	var picked := {"res": {}}
+	scr.done.connect(func(d): picked.res = d)
+	skip_tpl.pressed.emit()
+	await frames(1)
+	var studio_btn := scr.find_child("Template_studio_loft", true, false) as Button
+	check(studio_btn != null, "template picker lists studio_loft")
+	if studio_btn:
+		studio_btn.pressed.emit()
+	await frames(1)
+	eq(str(picked.res.get("choice", "")), "skipped", "emits skipped choice")
+	eq(str(picked.res.get("template", "")), "studio_loft", "carries chosen template id")
+	scr.queue_free()
+	await frames(1)
+	GameState.settings["reduce_motion"] = false
+
+
+func test_builtin_local_pack_five_cues_and_mochi_soul() -> void:
+	fresh_save_root()
+	GameState.settings.erase("music_themes")
+	GameState.settings.erase("addons")
+	var MusicPlayer := preload("res://scripts/world/music_player.gd")
+	var Soul := preload("res://scripts/ui/soul.gd")
+	Addons.reset()
+	Addons.builtin_override = "res://assets/local"
+	Addons.override_folders = PackedStringArray([ProjectSettings.globalize_path(Addons.BUNDLED_DIR)])
+	Addons.refresh()
+	check(Soul.custom(), "Mochi Soul active from res://assets/local")
+	var paths := {}
+	for cue in ["survey", "menu", "dark", "battle", "light"]:
+		var p := MusicPlayer.theme_path(cue)
+		check(p.begins_with("res://assets/local/music/") and p.ends_with(".mp3"), "%s cue resolves to built-in MP3 (%s)" % [cue, p])
+		paths[p] = true
+	eq(paths.size(), 5, "all 5 soundtrack cues (including survey vs light) use distinct files")
+	check(MusicPlayer.theme_path("survey") != MusicPlayer.theme_path("light"), "Light World creation and Light World are separate slots")
+	Addons.reset()
+
+
+func test_security_touchups_102() -> void:
+	fresh_save_root()
+	var SlotArchive := preload("res://scripts/core/slot_archive.gd")
+	var MapRefs := preload("res://scripts/home/map_refs_panel.gd")
+
+	# 1. glTF diamond-DAG / cyclic node graph bomb is bounded cleanly.
+	var bomb_doc := {
+		"asset": {"version": "2.0"},
+		"buffers": [{"byteLength": 36}],
+		"bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": 36}],
+		"accessors": [{"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"}],
+		"meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
+		"nodes": [
+			{"name": "Root", "children": [1, 1]},
+			{"name": "Self", "children": [1], "mesh": 0},
+		],
+	}
+	var buf := PackedByteArray()
+	buf.resize(36)
+	var cyc_node := CustomModels.parse_gltf_dict(bomb_doc, buf)
+	check(cyc_node != null, "cyclic glTF terminates safely without infinite recursion")
+	if cyc_node:
+		check(cyc_node.find_children("*", "Node", true, false).size() <= CustomModels.MAX_GLTF_NODES, "node count capped")
+		cyc_node.free()
+
+	# 2. .polox zip bundle rejects forbidden executable/script extensions.
+	var bad_zip := SaveManager.global_path("bad_bundle.polox")
+	var zp := ZIPPacker.new()
+	eq(zp.open(bad_zip), OK)
+	zp.start_file("world.json")
+	zp.write_file('{"name":"Bad"}'.to_utf8_buffer())
+	zp.close_file()
+	zp.start_file("payload.exe")
+	zp.write_file("MZ".to_utf8_buffer())
+	zp.close_file()
+	zp.close()
+	var insp: Dictionary = SlotArchive.inspect_zip(bad_zip)
+	check(not bool(insp.ok) and str(insp.error).contains("unsafe file type"), "rejects .exe inside .polox bundle")
+
+	# 3. Google Maps URL validator allows official HTTPS links and blocks untrusted/injected URIs.
+	eq(MapRefs.safe_maps_url("https://maps.google.com/?cid=12345"), "https://maps.google.com/?cid=12345")
+	eq(MapRefs.safe_maps_url("https://evil.example.com/?cid=12345"), "", "rejects non-Google host")
+	eq(MapRefs.safe_maps_url("http://maps.google.com/?cid=12345"), "", "rejects plain HTTP")
+	eq(MapRefs.safe_maps_url("https://maps.google.com/?q=a\nb"), "", "rejects control whitespace")
+
+	# 4. Expanded API/token redaction scrubs GitHub, HuggingFace, and xAI keys.
+	var scrubbed := KeyFormat.scrub("tok=" + "ghp_" + "AbCdEf0123456789GhIjKlMnOpQrSt")
+	check(not scrubbed.contains("AbCdEf"), "scrubs GitHub PAT shape")
+	var hf_scrubbed := KeyFormat.scrub("hf=" + "hf_" + "AbCdEf0123456789GhIjKlMnOp")
+	check(not hf_scrubbed.contains("AbCdEf"), "scrubs HuggingFace token shape")

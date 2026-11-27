@@ -206,7 +206,7 @@ func _build() -> void:
 	reflection.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip.add_child(reflection)
 	brand.add_child(clip)
-	var release_label := str(ProjectSettings.get_setting("application/config/release_label", "Polox Public Beta 1.01"))
+	var release_label := str(ProjectSettings.get_setting("application/config/release_label", "Polox Public Beta 1.02"))
 	var sub := UiKit.label(release_label, 22 if short else 26, ThemeBuilder.MUTED)
 	sub.name = "VersionLabel"
 	sub.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -265,7 +265,7 @@ func _build() -> void:
 		for b in buttons.get_children():
 			(b as Control).custom_minimum_size.y = 46 if _wide else 48
 
-	var how := "Tap to walk or talk" if TouchGestures.phone_layout() else "Click to walk  •  WASD, E talk, C menu"
+	var how := ("Tap to walk or talk" if TouchGestures.phone_layout() else "Click to walk  •  WASD, E talk, C menu") + "  •  Stays on device (cloud optional)"
 	var hint := UiKit.label(how, 18, Color(ThemeBuilder.MUTED, 0.8))
 	_halo(hint)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

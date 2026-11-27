@@ -1,6 +1,6 @@
 # Polox
 
-> **Polox Public Beta 1.01** — A cozy, local-first 3D life-sim about **your** life.
+> **Polox Public Beta 1.02** — A cozy, local-first 3D life-sim about **your** life.
 
 Build rooms, draw the **Bramins** who live in your **Dream World**, and talk with them — they remember what you tell them and carry on with their own small lives while you're away. Map your real home and neighbourhood as the **Light World**, step through a glowing reddish bathtub-like **Dream Gate** into worlds you invent, and settle things in friendly battles you can design yourself.
 
@@ -15,6 +15,13 @@ Song: Zachz Winner, Фрози, Joyful - Boogie. Music provided by NoCopyrightSo
 Character.AI is a trademark of its owner; Polox is not affiliated with or endorsed by Character.AI.
 
 ![A made-up world: an outdoor place, a friend, the day's card](docs/images/world.png)
+
+## New in Public Beta 1.02
+
+- **Skip Light World creation & use a template anytime:** The Light World home creation sequence is **completely optional**. A prominent **SKIP & USE A TEMPLATE** banner right at the top lets you jump straight into a ready-made Light World home template (*Cozy Bedroom*, *Sunlit Studio*, *Cozy Apartment*, or *Garden Cottage*), or switch templates later in *Settings > Light World*.
+- **Device-local by default:** Everything you make — worlds, friends, chats, memories, homes, drawings, settings, and keys — **stays on your device unless you choose to use a cloud service** (like Google Drive / OneDrive / Dropbox folder sync) or connect an online AI/map service yourself.
+- **Mochi Soul & built-in 5-slot soundtrack:** **Mochi** now appears everywhere the Soul cursor is used (Title screen, Light World creation cursor, and Battles / Battle Maker), and all five music slots (*Light World creation*, *Title menu*, *Dream World*, *Battle*, and *Light World*) ship with their own distinct built-in tracks. *Polox Originals* remains one toggle away in *Title > Add-ons* if you want Polox's procedural tunes and the Dream Drop Soul.
+- **Security touch-ups:** Bounded glTF/OBJ node graphs, buffers, and vertex/index counts in the custom 3D model loader; blocked executable/script file types and oversized entries inside `.polox` world bundles; strict HTTPS domain allow-listing on external Google Maps links; expanded API/token redaction in logs and repo scans; and pinned CI permissions/timeouts.
 
 ## New in Public Beta 1.01: Phone Link security
 
@@ -43,7 +50,7 @@ Full details: [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 | You have | Do this |
 | --- | --- |
-| A Windows PC | Run **`Polox-1.0.1-Setup.exe`** (Start menu entry, uninstaller, no admin needed), or unzip the **portable zip** anywhere and double-click `Polox.exe` |
+| A Windows PC | Run **`Polox-1.0.2-Setup.exe`** (Start menu entry, uninstaller, no admin needed), or unzip the **portable zip** anywhere and double-click `Polox.exe` |
 | An Android phone | Install the APK, or open your PC's Phone Link address in the phone's browser |
 | The source | `tools\get_godot.bat` once, then `run.bat` (Windows) or `./run.sh` (macOS, Linux) |
 

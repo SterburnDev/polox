@@ -8,11 +8,11 @@ checked, and where an installed copy keeps things.
 | | Public | Private |
 | --- | --- | --- |
 | Who it is for | Anyone; published from the public repository | Its owner and the devices on their own private Hub |
-| Built from | A tree **without** `assets/local/`: the public source snapshot | The owner's checkout, **with** `assets/local/` |
-| Title, Light World, Dream World and battle music | Polox's own tunes, made in code | The owner's soundtrack (`assets/local/music/`) |
-| The Soul you steer in battles | The Dream Drop | The owner's picture (`assets/local/pictures/`) |
+| Built from | A tree **without** `assets/local/secret/` or `assets/local/addons/`: the public source snapshot | The owner's checkout, with optional `assets/local/secret/` and `assets/local/addons/` |
+| Title, Light World creation, Light World, Dream World and battle music | Built-in 5-slot soundtrack (`assets/local/music/`), with Polox's own procedural tunes via *Polox Originals* | Same, plus optional private theme packs |
+| The Soul you steer on the title screen, Survey, and battles | Mochi (`assets/local/pictures/mochi.png`), with the Dream Drop via *Polox Originals* | Mochi |
 | Music secret (`yams👀`) | Eight original drawings (`assets/secret/`) | The owner's pictures (`assets/local/secret/`) |
-| Optional add-ons | Polox Originals (already what you hear) | Polox Originals, and the owner's own theme packs (`assets/local/addons/`) |
+| Optional add-ons | Polox Originals | Polox Originals, and the owner's own theme packs (`assets/local/addons/`) |
 | Everything else | Identical: gameplay, saves, add-on system, Phone Link, sync, platforms | |
 
 Nothing in the game's code knows which flavour it is. A copy that has the private pack uses it; a copy

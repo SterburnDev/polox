@@ -1,0 +1,52 @@
+{
+  "format": 1,
+  "id": "built-in",
+  "name": "Local Soundtrack & Pack",
+  "version": "1.0.2",
+  "description": "Built-in soundtrack and Soul overrides. Polox Originals restores Polox's synthesized tunes and Dream Drop.",
+  "overrides": {
+    "music": {
+      "survey": "music/your_name_please.mp3",
+      "menu": "music/surasshu_eek_true_highest_quality.mp3",
+      "dark": "music/extras_menu_sonic_mega_collection_ost.mp3",
+      "battle": "music/final_fantasy_vii_ost_those_who_fight_battle_theme.mp3",
+      "light": "music/house_theme_mother_earthbound_beginnings.mp3"
+    },
+    "songs": [
+      {
+        "file": "music/your_name_please.mp3",
+        "title": "Your Name Please",
+        "from": "Built-in Soundtrack",
+        "gain_db": 0.0
+      },
+      {
+        "file": "music/surasshu_eek_true_highest_quality.mp3",
+        "title": "Surasshu - Eek! (True Highest Quality)",
+        "from": "Built-in Soundtrack",
+        "gain_db": 0.0
+      },
+      {
+        "file": "music/extras_menu_sonic_mega_collection_ost.mp3",
+        "title": "Extras Menu - Sonic Mega Collection [OST]",
+        "from": "Built-in Soundtrack",
+        "gain_db": 0.0
+      },
+      {
+        "file": "music/final_fantasy_vii_ost_those_who_fight_battle_theme.mp3",
+        "title": "Final Fantasy VII OST - Those Who Fight Battle Theme",
+        "from": "Built-in Soundtrack",
+        "gain_db": 0.0
+      },
+      {
+        "file": "music/house_theme_mother_earthbound_beginnings.mp3",
+        "title": "House Theme - MOTHER EARTHBOUND BEGINNINGS",
+        "from": "Built-in Soundtrack",
+        "gain_db": 0.0
+      }
+    ],
+    "textures": {
+      "soul": "pictures/mochi.png"
+    }
+  },
+  "secret_images": []
+}

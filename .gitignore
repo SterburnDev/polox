@@ -63,8 +63,9 @@ addons/polox_android/bin/
 
 # Add-ons on this PC (local-addons/: songs, pictures and themes that aren't ours to share; docs/ADDONS.md)
 /local-addons/
-# Built in on this PC only (assets/local/: the soundtrack and the Soul; a copy without it uses Polox Originals)
-/assets/local/
+# Private secret vault images and private theme packs stay git-ignored; built-in music/pictures ship
+/assets/local/secret/
+/assets/local/addons/
 # The optional Detailed pack (CC0, ~130 MB): tools/get_detail_pack.py fetches it (docs/ASSET_CREDITS.md)
 /assets/detail/
 # [PERSONAL_DATA] Your saves, settings, keys and logs (scripts/core/personal_data.gd). Never committed or exported.

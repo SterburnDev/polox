@@ -211,6 +211,125 @@ static func defer_survey() -> void:
 	preload("res://scripts/core/json_util.gd").write_json(SaveManager.home_dir().path_join("survey_skipped.json"), {"skipped": true})
 
 
+## Ready-made Light World templates so players can skip the Light World creation sequence completely.
+const TEMPLATES := [
+	{"id": "starter_room", "name": "Cozy Bedroom", "desc": "Warm oak floor, bed, desk, wardrobe, rug, and the Dream Gate."},
+	{"id": "studio_loft", "name": "Sunlit Studio", "desc": "A spacious 10x8 studio with double bed, armchair, desk, dining table, and bookshelf."},
+	{"id": "two_room_flat", "name": "Cozy Apartment (2 rooms)", "desc": "Your bedroom connected by a door to a bright living & dining room."},
+	{"id": "garden_cottage", "name": "Garden Cottage (Room + Yard)", "desc": "A cozy cottage room with a front door out to a sunny Light World yard."},
+]
+
+
+static func _clear_old_template_entries() -> void:
+	var places_dir := SaveManager.home_dir().path_join("places")
+	for id in SaveManager.list_light_rooms():
+		var rid := str(id)
+		if rid.begins_with("lw_template_"):
+			DirAccess.remove_absolute(places_dir.path_join(rid + ".json"))
+			continue
+		var r := SaveManager.load_room(rid)
+		if bool(r.get("entry", false)):
+			r.erase("entry")
+			SaveManager.save_room(r)
+
+
+static func _template_link(a: Dictionary, b: Dictionary, ax: int, az: int, bx: int, bz: int, label_ab: String, label_ba: String) -> void:
+	var d1 := RoomEditor.add_object(a, ax, az, "door")
+	if not d1.is_empty():
+		d1.merge({"door_target": str(b.id), "label": label_ab}, true)
+	var d2 := RoomEditor.add_object(b, bx, bz, "door")
+	if not d2.is_empty():
+		d2.merge({"door_target": str(a.id), "label": label_ba}, true)
+
+
+## Builds and saves one of TEMPLATES as the Light World, marks the Survey skipped, and returns its entry id.
+static func apply_template(template_id: String) -> String:
+	_clear_old_template_entries()
+	defer_survey()
+	match template_id:
+		"studio_loft":
+			var r := base_place("lw_template_studio", "Sunlit Studio", 10, 8)
+			r["entry"] = true
+			r["wall"] = {"color": "#f2efe8", "texture": ""}
+			add(r, "double_bed", 0, 0)
+			add(r, "nightstand", 2, 0)
+			add(r, "bookshelf", 4, 0)
+			add(r, "desk", 7, 0)
+			add(r, "chair", 7, 1, 2)
+			add(r, "wardrobe", 9, 0)
+			add(r, "armchair", 1, 5, 1)
+			add(r, "coffee_table", 2, 5)
+			add(r, "rug", 2, 4)
+			add(r, "dining_table", 6, 4)
+			add(r, "chair", 6, 3, 2)
+			add(r, "lamp", 9, 6)
+			add(r, "plant", 0, 7)
+			add(r, "light_switch", 6, 0)
+			r["spawn"] = [4, 5]
+			Realms.add_gate(r, Vector2i(8, 6), Realms.DARK, "")
+			SaveManager.save_room(r)
+			return "lw_template_studio"
+		"two_room_flat":
+			var bed := base_place("lw_template_bed", "My Bedroom", 7, 6)
+			bed["entry"] = true
+			bed["wall"] = {"color": "#e8eef5", "texture": ""}
+			add(bed, "bed", 0, 0)
+			add(bed, "nightstand", 1, 0)
+			add(bed, "desk", 4, 0)
+			add(bed, "chair", 4, 1, 2)
+			add(bed, "wardrobe", 0, 4)
+			add(bed, "rug", 2, 2)
+			add(bed, "light_switch", 3, 0)
+			bed["spawn"] = [3, 4]
+			Realms.add_gate(bed, Vector2i(1, 4), Realms.DARK, "")
+			var living := base_place("lw_template_living", "Living Room", 9, 7)
+			living["wall"] = {"color": "#efe6d8", "texture": ""}
+			add(living, "couch", 3, 1)
+			add(living, "coffee_table", 3, 2)
+			add(living, "tv", 3, 0)
+			add(living, "bookshelf", 7, 0)
+			add(living, "dining_table", 6, 4)
+			add(living, "chair", 6, 3, 2)
+			add(living, "lamp", 8, 1)
+			add(living, "plant", 0, 6)
+			add(living, "rug", 3, 3)
+			living["spawn"] = [1, 3]
+			_template_link(bed, living, 6, 3, 0, 3, "Living Room", "My Bedroom")
+			SaveManager.save_room(bed)
+			SaveManager.save_room(living)
+			return "lw_template_bed"
+		"garden_cottage":
+			var cottage := base_place("lw_template_cottage", "Garden Cottage", 8, 6)
+			cottage["entry"] = true
+			cottage["wall"] = {"color": "#f5ecd8", "texture": ""}
+			add(cottage, "bed", 0, 0)
+			add(cottage, "nightstand", 1, 0)
+			add(cottage, "desk", 5, 0)
+			add(cottage, "chair", 5, 1, 2)
+			add(cottage, "bookshelf", 3, 0)
+			add(cottage, "rug", 3, 3)
+			add(cottage, "lamp", 7, 1)
+			add(cottage, "plant", 0, 4)
+			add(cottage, "light_switch", 2, 0)
+			cottage["spawn"] = [4, 4]
+			Realms.add_gate(cottage, Vector2i(6, 4), Realms.DARK, "")
+			var yard := base_place("lw_template_yard", "Front Yard", 10, 8, "outdoor")
+			add(yard, "bench", 2, 2)
+			add(yard, "birdbath", 6, 3)
+			add(yard, "plant", 1, 5)
+			add(yard, "plant", 8, 5)
+			add(yard, "lantern", 4, 1)
+			yard["spawn"] = [4, 2]
+			_template_link(cottage, yard, 4, 5, 4, 0, "Step outside", "Back inside")
+			SaveManager.save_room(cottage)
+			SaveManager.save_room(yard)
+			return "lw_template_cottage"
+		_:
+			var r := placeholder()
+			SaveManager.save_room(r)
+			return Realms.ENTRY
+
+
 ## A saved visit home must remain a visit home even if a generated room disappeared.
 static func recover_entry() -> String:
 	var entry := entry_id()

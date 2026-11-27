@@ -115,7 +115,7 @@ static func stored(settings: Dictionary) -> PackedStringArray:
 
 ## A fresh pattern for anything shaped like a known key (a caller on another thread keeps its own).
 static func shapes() -> RegEx:
-	return RegEx.create_from_string("(?<![A-Za-z0-9])(?:sk-[A-Za-z0-9_\\-]{16,}|gsk_[A-Za-z0-9]{16,}|AIza[A-Za-z0-9_\\-]{24,}|AQ\\.[A-Za-z0-9_\\-.]{16,}|VENICE-[A-Za-z0-9_\\-]{16,})")
+	return RegEx.create_from_string("(?<![A-Za-z0-9])(?:sk-[A-Za-z0-9_\\-]{16,}|gsk_[A-Za-z0-9]{16,}|AIza[A-Za-z0-9_\\-]{24,}|AQ\\.[A-Za-z0-9_\\-.]{16,}|VENICE-[A-Za-z0-9_\\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|hf_[A-Za-z0-9]{20,}|xai-[A-Za-z0-9_\\-]{16,}|pplx-[A-Za-z0-9_\\-]{16,}|AKIA[0-9A-Z]{16})")
 
 
 ## The text with anything shaped like a known key taken out, whether or not it is one of the

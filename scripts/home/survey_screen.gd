@@ -22,6 +22,8 @@ const SurveyDraft := preload("res://scripts/home/survey_draft.gd")
 const HomeStore := preload("res://scripts/home/home_store.gd")
 const UiKit := preload("res://scripts/ui/ui_kit.gd")
 const MusicPlayer := preload("res://scripts/world/music_player.gd")
+const Soul := preload("res://scripts/ui/soul.gd")
+const LightHome := preload("res://scripts/world/light_home.gd")
 
 const WHITE := Color("#f4f0e8")
 const YELLOW := Color("#ffe14d")
@@ -65,16 +67,14 @@ var _draft_text: Dictionary = {}
 var _draft_dirty := false
 var _draft_wait := 0.0
 var _completed := false
+var _skip_banner: PanelContainer
+var _skip_template_btn: Button
+var _picking_template := false
 
 
 class Heart extends Control:
 	func _draw() -> void:
-		var s := size.x / 9.0
-		var px := [[1, 0], [2, 0], [6, 0], [7, 0], [0, 1], [1, 1], [2, 1], [3, 1], [5, 1], [6, 1], [7, 1], [8, 1],
-			[0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2], [8, 2], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3],
-			[1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [3, 6], [4, 6], [5, 6], [4, 7]]
-		for p in px:
-			draw_rect(Rect2(Vector2(p[0], p[1]) * s, Vector2(s, s)), Color("#ff2a48"))
+		draw_texture_rect(Soul.texture(), Rect2(Vector2.ZERO, size), false)
 
 
 func _ready() -> void:
@@ -95,7 +95,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.offset_left = 28
 	center.offset_right = -28
-	center.offset_top = 90
+	center.offset_top = 156
 	center.offset_bottom = -120
 	center.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	center.scroll_deadzone = 16
@@ -116,7 +116,7 @@ func _ready() -> void:
 	_area.add_theme_constant_override("separation", 10)
 	_col.add_child(_area)
 	_heart = Heart.new()
-	_heart.size = Vector2(_big * 0.8, _big * 0.8)
+	_heart.size = Vector2(_big * 0.95, _big * 0.95)
 	_heart.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_heart.visible = false
 	add_child(_heart)
@@ -128,9 +128,45 @@ func _ready() -> void:
 	_skip.offset_bottom = -24
 	_skip.visible = false
 	add_child(_skip)
+	_skip_banner = PanelContainer.new()
+	_skip_banner.name = "SkipBanner"
+	_skip_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_skip_banner.offset_left = 20
+	_skip_banner.offset_right = -20
+	_skip_banner.offset_top = 12
+	var banner_style := StyleBoxFlat.new()
+	banner_style.bg_color = Color(0.08, 0.08, 0.1, 0.94)
+	banner_style.border_color = YELLOW
+	banner_style.set_border_width_all(2)
+	banner_style.content_margin_left = 14
+	banner_style.content_margin_right = 14
+	banner_style.content_margin_top = 8
+	banner_style.content_margin_bottom = 8
+	_skip_banner.add_theme_stylebox_override("panel", banner_style)
+	var banner_row := UiKit.columns(10)
+	var banner_msg := _label(16, WHITE)
+	banner_msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	banner_msg.text = "OPTIONAL: You don't have to go through the Light World creation sequence — skip it anytime and use a template instead. Everything stays on your device unless you use a cloud service."
+	banner_row.add_child(banner_msg)
+	var banner_btns := UiKit.hbox(8)
+	_skip_template_btn = _plain_button("SKIP & USE A TEMPLATE", func(): _show_template_picker())
+	_skip_template_btn.name = "SkipTemplate"
+	_skip_template_btn.add_theme_color_override("font_color", YELLOW)
+	var tpl_box := StyleBoxFlat.new()
+	tpl_box.bg_color = Color(YELLOW, 0.14)
+	tpl_box.border_color = YELLOW
+	tpl_box.set_border_width_all(2)
+	tpl_box.content_margin_left = 12
+	tpl_box.content_margin_right = 12
+	_skip_template_btn.add_theme_stylebox_override("normal", tpl_box)
+	_skip_template_btn.add_theme_stylebox_override("hover", tpl_box)
+	_skip_template_btn.add_theme_stylebox_override("focus", tpl_box)
+	banner_btns.add_child(_skip_template_btn)
 	_leave = _plain_button("LEAVE", func(): _finish("skipped"))
-	_leave.position = Vector2(20, 18)
-	add_child(_leave)
+	banner_btns.add_child(_leave)
+	banner_row.add_child(banner_btns)
+	_skip_banner.add_child(banner_row)
+	add_child(_skip_banner)
 	_back = _plain_button("GO BACK", on_back)
 	_back.name = "SurveyBack"
 	_back.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
@@ -658,7 +694,7 @@ func _build_consent() -> void:
 	if not coords:
 		lines.append("      To find those coordinates%s, OpenStreetMap's search (Nominatim) gets the address." % (" if the helper doesn't" if helper != "none" else ""))
 	lines.append("")
-	lines.append("Your memories and the rest of your answers aren't sent. Everything that comes back stays in Documents\\Polox\\my_home on this computer.")
+	lines.append("Your memories and the rest of your answers aren't sent. Everything stays in PersonalData/my_home on this device unless you connect a cloud or online service yourself.")
 	var body := Label.new()
 	body.text = "\n".join(lines)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -778,8 +814,11 @@ func complete_draft() -> void:
 func resume_review() -> void:
 	finished = false
 	choice = ""
+	_picking_template = false
 	step_i = SurveyData.STEPS.size() - 1
 	_leave.visible = true
+	if _skip_banner:
+		_skip_banner.visible = true
 	_sketch = null
 	_progress = null
 	_show_step()
@@ -801,6 +840,57 @@ func _exit_tree() -> void:
 		_music = null
 
 
+func _show_template_picker() -> void:
+	if finished:
+		return
+	_picking_template = true
+	_typing = false
+	_waiting_tap = false
+	_skip.visible = false
+	_back.visible = false
+	_heart.visible = false
+	for c in _area.get_children():
+		_area.remove_child(c)
+		c.queue_free()
+	_text.text = "CHOOSE A LIGHT WORLD TEMPLATE."
+	_text.visible_characters = -1
+	_hint.text = "Everything stays on your device unless you use a cloud service. You can always customize rooms in Build mode or map your home later in Settings > Light World."
+	_hint.visible = true
+	var first: Control = null
+	for tpl in LightHome.TEMPLATES:
+		var tid := str(tpl.id)
+		var b := _option("%s — %s" % [str(tpl.name).to_upper(), str(tpl.desc)], func(): _finish_with_template(tid))
+		b.name = "Template_" + tid
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_area.add_child(b)
+		if first == null:
+			first = b
+	var resume_btn := _option("BACK TO QUESTIONS", func():
+		_picking_template = false
+		_show_step())
+	resume_btn.name = "BackToSurvey"
+	_area.add_child(resume_btn)
+	if first:
+		_focus_later.call_deferred(first.get_instance_id())
+
+
+func _finish_with_template(template_id: String) -> void:
+	if finished:
+		return
+	_save_draft()
+	finished = true
+	choice = "skipped"
+	_skip.visible = false
+	_leave.visible = false
+	if _skip_banner:
+		_skip_banner.visible = false
+	for c in _area.get_children():
+		_area.remove_child(c)
+		c.queue_free()
+	_heart.visible = false
+	done.emit({"answers": SurveyData.active_answers(answers), "choice": "skipped", "template": template_id, "helper": "none", "streets": false})
+
+
 func _finish(how: String) -> void:
 	if finished:
 		return
@@ -809,6 +899,8 @@ func _finish(how: String) -> void:
 	choice = how
 	_skip.visible = false
 	_leave.visible = false
+	if _skip_banner:
+		_skip_banner.visible = false
 	for c in _area.get_children():
 		_area.remove_child(c)
 		c.queue_free()

@@ -14,6 +14,8 @@ const MANIFEST := "manifest.json"
 const SKIP_DIRS: PackedStringArray = ["backups", "conflicts"]
 const MAX_BUNDLE_FILES := 20000
 const MAX_BUNDLE_BYTES := 512 * 1024 * 1024
+const MAX_ENTRY_BYTES := 64 * 1024 * 1024
+const FORBIDDEN_EXTS: PackedStringArray = ["exe", "dll", "so", "dylib", "bat", "cmd", "ps1", "vbs", "vbe", "js", "jse", "wsf", "wsh", "msi", "msp", "scr", "com", "pif", "hta", "cpl", "jar", "sh", "bash", "lnk", "url", "gd", "gdc"]
 
 
 static func backups_dir(id: String) -> String:
@@ -336,7 +338,14 @@ static func inspect_zip(zip_path: String) -> Dictionary:
 		seen[key] = true
 		if f.ends_with("/"):
 			continue
-		bytes += reader.read_file(f).size()
+		if f.get_extension().to_lower() in FORBIDDEN_EXTS:
+			reader.close()
+			return {"ok": false, "error": "unsafe file type inside the bundle: " + f, "files": []}
+		var entry_size := reader.read_file(f).size()
+		if entry_size > MAX_ENTRY_BYTES:
+			reader.close()
+			return {"ok": false, "error": "file inside the bundle is too big: " + f, "files": []}
+		bytes += entry_size
 		if bytes > MAX_BUNDLE_BYTES:
 			reader.close()
 			return {"ok": false, "error": "bundle is too big", "files": []}

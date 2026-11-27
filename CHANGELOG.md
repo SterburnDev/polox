@@ -1,5 +1,16 @@
 # Changelog
 
+## Polox Public Beta 1.02 (1.0.2) — Skip-to-Template, Local-Only Clarity, Mochi Soul & Built-in Soundtrack (2026-11-26)
+
+- **Light World creation is clearly optional (skip & use a template):** Added a prominent **SKIP & USE A TEMPLATE** banner at the top of the Light World creation sequence (`survey_screen.gd`), four ready-made Light World templates in `light_home.gd` (*Cozy Bedroom*, *Sunlit Studio*, *Cozy Apartment*, *Garden Cottage*), and a **Use template** picker in *Settings > Light World*.
+- **Device-local privacy made unmistakable:** Title screen, *New world*, onboarding, *Settings > Light World*, and the Survey all state clearly that everything stays on your device unless you choose to use a cloud service or online AI/map service.
+- **Mochi Soul everywhere & 5 built-in music overrides:** `Mochi.png` now renders as the Soul across the title screen, battles / Battle Maker, and the Survey cursor (`survey_screen.gd` `Heart`). Shipped the five distinct built-in tracks in `assets/local/` covering *Light World creation*, *Title menu*, *Dream World*, *Battle*, and *Light World* as separate slots (*Polox Originals* in *Title > Add-ons* still restores Polox's procedural tunes and Dream Drop anytime).
+- **Cybersecurity touch-ups:**
+  - `custom_models.gd`: added cycle detection and node-count caps (`MAX_GLTF_NODES`) on glTF node hierarchies, cumulative buffer size limits, and stride/vertex/index/triangle caps on `.glb`/`.gltf`/`.obj` imports.
+  - `slot_archive.gd`: blocked executable/script extensions (`FORBIDDEN_EXTS`) and oversized single entries (`MAX_ENTRY_BYTES`) when inspecting `.polox` and backup zip bundles.
+  - `map_refs_panel.gd` & `map_home_panel.gd`: added `safe_maps_url()` HTTPS + Google Maps host validation and rejected whitespace/control characters before `OS.shell_open`.
+  - `key_format.gd` & `make_public_source.py` & `.github/workflows/ci.yml`: expanded token/key scrubbing patterns (`gh*`, `github_pat_`, `hf_`, `xai-`, `pplx-`, `AKIA`, `gsk_`, `AQ.`, `VENICE-`) and hardened CI workflow (`timeout-minutes`, `persist-credentials: false`).
+
 ## Polox Public Beta 1.01 (1.0.1) — Phone Link security release (2026-11-23)
 
 Phone Link on Same Wi-Fi no longer hands anything that opens your worlds to someone watching the network, and it checks more of what it receives. Phones that paired with an earlier Polox keep working; pair them again to get the new protection.

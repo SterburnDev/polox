@@ -12,7 +12,7 @@ func _ready() -> void:
 	_name = UiKit.line_edit("World name (you can change it later)")
 	_name.max_length = 60
 	body.add_child(UiKit.field_row("Name", _name, 120))
-	body.add_child(UiKit.para("Guided: name your world, tell it a little about you, and meet your first friend. Blank: an empty room to build from scratch.", 18, ThemeBuilder.MUTED))
+	body.add_child(UiKit.para("Guided: set up your world and first friend (the Light World sequence is completely optional — skip it anytime to use a template). Blank: an empty room to build from scratch. Everything stays on your device unless you use a cloud service or online AI.", 18, ThemeBuilder.MUTED))
 	body.add_child(UiKit.spacer(true))
 	var row := UiKit.hbox(12)
 	row.alignment = BoxContainer.ALIGNMENT_END

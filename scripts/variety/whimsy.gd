@@ -120,12 +120,12 @@ const FURNITURE_INSPECTS := {
 	],
 }
 
-## Deadpan reactions when clicking the title screen's version label ("Polox Public Beta 1.01").
+## Deadpan reactions when clicking the title screen's version label ("Polox Public Beta 1.02").
 const VERSION_CLICKS: PackedStringArray = [
-	"Polox Public Beta 1.01 — freshly baked.",
-	"Yes, it really is Public Beta 1.01.",
+	"Polox Public Beta 1.02 — freshly baked.",
+	"Yes, it really is Public Beta 1.02.",
 	"Clicking it won't make Public Beta 2.0 come out faster.",
-	"Still Public Beta 1.01. Very stubborn version number.",
+	"Still Public Beta 1.02. Very stubborn version number.",
 	"Okay fine. Here is one (1) complimentary sparkle. ✦",
 	"You are extraordinarily persistent. The Bramins respect that.",
 	"The version label blushes and pretends to be a normal piece of UI.",

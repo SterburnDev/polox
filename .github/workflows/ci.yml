@@ -13,9 +13,12 @@ jobs:
   repo-hygiene:
     name: Privacy, Artwork & Script Hygiene
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
