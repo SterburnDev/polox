@@ -13,6 +13,7 @@ signal worlds_pressed
 signal settings_pressed
 signal addons_pressed
 signal connect_pressed   # Polox for Android, not paired yet: Connect to your PC
+signal cloud_pressed     # Polox for Android: Cloud sync (Google Drive / folder)
 
 const UiKit := preload("res://scripts/ui/ui_kit.gd")
 const ThemeBuilder := preload("res://scripts/ui/theme_builder.gd")
@@ -36,6 +37,7 @@ const EYES := "👀"
 static var eyes := false
 
 var show_connect := false   # set by main.gd before the screen opens
+var show_cloud := false     # set by main.gd on Android when cloud sync is available
 var _heart: Control
 var _wide := false
 var _built := false
@@ -259,6 +261,10 @@ func _build() -> void:
 		var c := UiKit.button("📱 Connect to your PC", func(): connect_pressed.emit())
 		c.name = "ConnectToPC"
 		buttons.add_child(c)
+	if show_cloud:
+		var cs := UiKit.button("☁ Cloud sync", func(): cloud_pressed.emit())
+		cs.name = "CloudSync"
+		buttons.add_child(cs)
 	if not OS.has_feature("web"):   # a browser tab can't quit itself
 		buttons.add_child(UiKit.button("Quit", func(): get_tree().quit()))
 	if _wide or short:

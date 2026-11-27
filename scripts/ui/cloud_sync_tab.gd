@@ -70,7 +70,11 @@ func refresh() -> void:
 		_v.add_child(message)
 	if not CloudService.supported():
 		_two_ways()
-		_v.add_child(UiKit.para("Cloud sync isn't part of the browser version: it plays through your PC with Phone Link.", 18))
+		if CloudService.is_android():
+			var why := AndroidNative.last_error if AndroidNative.last_error != "" else "cloud picker helper unavailable"
+			_v.add_child(UiKit.para("Cloud sync couldn't reach Polox's Android file-picker plugin (%s)." % why, 18, ThemeBuilder.YELLOW))
+		else:
+			_v.add_child(UiKit.para("Cloud sync isn't part of the browser version: it plays through your PC with Phone Link.", 18))
 		return
 	if CloudService.is_set_up():
 		# Set up already: what the player came to do (their worlds, and any question) comes first,

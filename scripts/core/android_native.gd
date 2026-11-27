@@ -52,8 +52,19 @@ static func _native() -> Object:
 		last_error = "PoloxAndroid plugin missing (APK built without addons/polox_android)"
 		return null
 	_plugin = Engine.get_singleton(PLUGIN)
-	_plugin.connect("memory_warning", _on_memory_warning)
+	if _plugin.has_signal("memory_warning") and not _plugin.is_connected("memory_warning", _on_memory_warning):
+		_plugin.connect("memory_warning", _on_memory_warning)
 	return _plugin
+
+
+## Godot 4's JNISingleton does not override Object.has_method() for @UsedByGodot Java methods;
+## it exposes has_java_method() instead.
+static func _has_plugin_method(p: Object, method_name: String) -> bool:
+	if p == null:
+		return false
+	if p.has_method("has_java_method"):
+		return bool(p.call("has_java_method", method_name))
+	return p.has_method(method_name)
 
 
 ## Android is short of memory (Godot doesn't pass this on by itself): the whole scene tree hears it as
@@ -123,8 +134,7 @@ const NO_DOCUMENTS := "This copy of Polox can't open cloud documents (it needs t
 
 ## True when this build can show the picker (the Android app with a plugin new enough to have it).
 static func documents_available() -> bool:
-	var p := _native()
-	return p != null and p.has_method("pickDocumentToCreate")
+	return _has_plugin_method(_native(), "pickDocumentToCreate")
 
 
 ## `handler` is called with (purpose: String, uri: String) when the player finishes with the picker:
@@ -193,8 +203,7 @@ static func release_document(uri: String) -> void:
 
 ## True when this build can pick and sync a whole cloud folder (ACTION_OPEN_DOCUMENT_TREE).
 static func tree_available() -> bool:
-	var p := _native()
-	return p != null and p.has_method("pickTree")
+	return _has_plugin_method(_native(), "pickTree")
 
 
 ## Opens Android's folder picker (DriveSync, Syncthing, Nextcloud, local/SD); answer arrives via

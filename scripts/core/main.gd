@@ -330,6 +330,8 @@ func show_title() -> void:
 	t.addons_pressed.connect(open_addons)
 	t.show_connect = phone != null and bool(phone.get("app")) and not phone.paired()
 	t.connect_pressed.connect(func(): open_app_connect(false, false))
+	t.show_cloud = OS.has_feature("android") and CloudService.supported()
+	t.cloud_pressed.connect(open_cloud_sync_settings)
 	screen = t
 	ui.add_child(t)
 	_warm_world.call_deferred()

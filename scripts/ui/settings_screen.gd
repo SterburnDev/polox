@@ -92,7 +92,7 @@ func _ready() -> void:
 		pl.name = "Phone Link"
 		pl.build(main)
 		tabs.add_child(pl)
-	if CloudService.supported():   # [CLOUD_SYNC] PCs and the Android app (the browser plays through the PC)
+	if not OS.has_feature("web"):   # [CLOUD_SYNC] PCs and the Android app (the browser plays through the PC)
 		var cloud := CloudSyncTab.new()
 		cloud.name = "Cloud sync"
 		cloud.main = main

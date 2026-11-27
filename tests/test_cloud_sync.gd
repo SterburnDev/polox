@@ -753,3 +753,20 @@ func test_android_tree_store_and_hybrid_document_refs() -> void:
 	check(android.enable("solo", doc_uri).ok, "links a direct content:// document while TreeStore is active")
 	var hybrid_push := android.sync("solo")
 	check(hybrid_push.ok and hybrid_push.action == "pushed", "direct Google Drive ref still pushes through TreeStore: " + str(hybrid_push.error))
+
+
+class _FakeJNISingleton extends RefCounted:
+	var java_methods := PackedStringArray(["pickDocumentToCreate", "pickTree"])
+
+	func has_java_method(method_name: StringName) -> bool:
+		return str(method_name) in java_methods
+
+
+func test_android_native_uses_has_java_method_for_jni_singleton() -> void:
+	const AndroidNative := preload("res://scripts/core/android_native.gd")
+	var fake := _FakeJNISingleton.new()
+	check(not fake.has_method("pickDocumentToCreate"), "Object.has_method does not report Java methods on JNISingleton")
+	check(AndroidNative._has_plugin_method(fake, "pickDocumentToCreate"), "_has_plugin_method detects pickDocumentToCreate via has_java_method")
+	check(AndroidNative._has_plugin_method(fake, "pickTree"), "_has_plugin_method detects pickTree via has_java_method")
+	check(not AndroidNative._has_plugin_method(fake, "missingMethod"), "_has_plugin_method returns false for missing methods")
+	check(not AndroidNative._has_plugin_method(null, "pickTree"), "_has_plugin_method handles null plugin safely")
