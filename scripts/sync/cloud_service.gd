@@ -27,8 +27,24 @@ static func supported() -> bool:
 	return not OS.has_feature("android") or AndroidNative.documents_available()
 
 
-static func uses_documents() -> bool:
+static func is_android() -> bool:
 	return OS.has_feature("android")
+
+
+static func tree_uri() -> String:
+	return str(config().get("tree_uri", ""))
+
+
+static func set_tree_uri(uri: String) -> void:
+	_save("tree_uri", uri)
+
+
+static func uses_tree() -> bool:
+	return OS.has_feature("android") and AndroidNative.tree_available() and tree_uri() != ""
+
+
+static func uses_documents() -> bool:
+	return OS.has_feature("android") and not uses_tree()
 
 
 static func config() -> Dictionary:
@@ -61,10 +77,12 @@ static func set_automatic(on: bool) -> void:
 
 ## True once there is somewhere to sync to.
 static func is_set_up() -> bool:
-	return supported() and (uses_documents() or folder() != "")
+	return supported() and (OS.has_feature("android") or folder() != "")
 
 
 static func store() -> RefCounted:
+	if uses_tree():
+		return CloudStore.TreeStore.new(tree_uri())
 	if uses_documents():
 		return CloudStore.DocumentStore.new()
 	return CloudStore.FolderStore.new(folder())

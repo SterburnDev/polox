@@ -185,7 +185,71 @@ static func copy_file_to_document(source_path: String, uri: String) -> String:
 	return str(_native().call("copyFileToDocument", source_path, uri))
 
 
-## Gives back the permission for a document Polox no longer needs.
+## Gives back the permission for a document or folder Polox no longer needs.
 static func release_document(uri: String) -> void:
 	if documents_available():
 		_native().call("releaseDocument", uri)
+
+
+## True when this build can pick and sync a whole cloud folder (ACTION_OPEN_DOCUMENT_TREE).
+static func tree_available() -> bool:
+	var p := _native()
+	return p != null and p.has_method("pickTree")
+
+
+## Opens Android's folder picker (DriveSync, Syncthing, Nextcloud, local/SD); answer arrives via
+## "document_picked" with the given `purpose`.
+static func pick_tree(purpose: String) -> bool:
+	if not tree_available():
+		return false
+	_native().call("pickTree", purpose)
+	return true
+
+
+## {exists, name} for a picked folder ({exists: false} if gone or permission revoked).
+static func tree_info(tree_uri: String) -> Dictionary:
+	if not tree_available():
+		return {"exists": false}
+	var parsed: Variant = JSON.parse_string(str(_native().call("treeInfo", tree_uri)))
+	return parsed if parsed is Dictionary else {"exists": false}
+
+
+## Sorted ".poloxsync" file names directly inside the picked cloud folder.
+static func tree_list(tree_uri: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	if not tree_available():
+		return out
+	var parsed: Variant = JSON.parse_string(str(_native().call("treeList", tree_uri)))
+	if parsed is Array:
+		for item in parsed:
+			var name := str(item)
+			if name != "":
+				out.append(name)
+	return out
+
+
+## {exists, name, bytes, modified_ms} for a named file inside the picked cloud folder.
+static func tree_document_info(tree_uri: String, file_name: String) -> Dictionary:
+	if not tree_available():
+		return {"exists": false}
+	var parsed: Variant = JSON.parse_string(str(_native().call("treeDocumentInfo", tree_uri, file_name)))
+	return parsed if parsed is Dictionary else {"exists": false}
+
+
+## Copies a named file from the picked cloud folder into one of Polox's own files. "" on success.
+static func tree_copy_to_file(tree_uri: String, file_name: String, dest_path: String) -> String:
+	if not tree_available():
+		return NO_DOCUMENTS
+	return str(_native().call("treeCopyToFile", tree_uri, file_name, dest_path))
+
+
+## Creates or replaces a named file inside the picked cloud folder from one of Polox's own files.
+static func tree_copy_from_file(source_path: String, tree_uri: String, file_name: String) -> String:
+	if not tree_available():
+		return NO_DOCUMENTS
+	return str(_native().call("treeCopyFromFile", source_path, tree_uri, file_name))
+
+
+## Gives back the persistent grant for a picked cloud folder.
+static func release_tree(tree_uri: String) -> void:
+	release_document(tree_uri)

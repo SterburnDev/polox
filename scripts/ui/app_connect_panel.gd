@@ -83,11 +83,18 @@ func show_step(s: String) -> void:
 # --- 1. What happens ----------------------------------------------------------------------------
 
 func _intro() -> void:
-	body.add_child(UiKit.para("Polox plays on this phone by itself. Connect it to Polox on your PC to sync your worlds both ways and let your friends talk through the PC's AI (its key stays on the PC).", 22))
-	body.add_child(UiKit.para("Polox will listen on your Wi-Fi for your PC, which announces only its name. Nothing is sent until you pick it. If Android asks about nearby devices or your local network, allow it so Polox can hear your PC.", 20, ThemeBuilderC.MUTED))
-	body.add_child(UiKit.para("On the PC: Settings > Phone Link > switch it on.", 20, ThemeBuilderC.MUTED))
+	body.add_child(UiKit.para("Polox plays on this phone by itself. Connect to your PC with Phone Link for live play (its AI key stays on the PC), or use Google Drive / Cloud sync when your PC is off.", 22))
+	body.add_child(UiKit.para("Phone Link listens on your Wi-Fi for your PC, which announces only its name. Nothing is sent until you pick it. If Android asks about nearby devices or your local network, allow it so Polox can hear your PC.", 20, ThemeBuilderC.MUTED))
+	body.add_child(UiKit.para("On the PC: Settings > Phone Link (or Settings > Cloud sync).", 20, ThemeBuilderC.MUTED))
 	var row := UiKit.flow_row(12)   # (wraps on an upright phone)
 	row.add_child(UiKit.button("Play without the PC", func(): close(), 0))
+	var cloud := UiKit.button("☁ Google Drive / Cloud", func():
+		var owner_main := main
+		close()
+		if owner_main and owner_main.has_method("open_cloud_sync_settings"):
+			owner_main.open_cloud_sync_settings(), 0)
+	cloud.name = "CloudSyncButton"
+	row.add_child(cloud)
 	var go := UiKit.button("Look for my PC", func(): show_step("search"), 0)
 	row.add_child(go)
 	body.add_child(UiKit.spacer(true))

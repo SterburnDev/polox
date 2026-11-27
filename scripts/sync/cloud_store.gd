@@ -66,12 +66,7 @@ class FolderStore extends RefCounted:
 		if not copied:
 			DirAccess.remove_absolute(part)
 			return "Couldn't read the cloud copy (another program may be using it). Try again in a moment."
-		if FileAccess.file_exists(dest):
-			DirAccess.remove_absolute(dest)
-		if DirAccess.rename_absolute(part, dest) != OK:
-			DirAccess.remove_absolute(part)
-			return "Couldn't save the cloud copy on this device (is the disk full?)."
-		return ""
+		return _atomic_finish_fetch(part, dest, "Couldn't save the cloud copy on this device (is the disk full?).")
 
 	## Replaces the package with `source`. The new file is copied in beside the old one under another
 	## name and takes its place only when the copy is whole and its size matches.
@@ -123,43 +118,184 @@ class FolderStore extends RefCounted:
 		file.close()
 		return size
 
+	static func _atomic_finish_fetch(part: String, dest: String, disk_full_msg: String) -> String:
+		if FileAccess.file_exists(dest):
+			DirAccess.remove_absolute(dest)
+		if DirAccess.rename_absolute(part, dest) != OK:
+			DirAccess.remove_absolute(part)
+			return disk_full_msg
+		return ""
+
+	static func _is_permanent_cloud_error(error: String) -> bool:
+		return error.contains("no longer allowed") or error.contains("Pick it again") \
+			or error.contains("Choose it again") or error.contains("wasn't made") \
+			or error.contains("isn't in the cloud")
+
 
 class DocumentStore extends RefCounted:
 	const AndroidNative := preload("res://scripts/core/android_native.gd")
+
+	var _backend: Variant = null
+
+	func _init(custom_backend: Variant = null) -> void:
+		_backend = custom_backend
+
+	func _api() -> Variant:
+		return _backend if _backend != null else AndroidNative
 
 	func kind() -> String:
 		return "document"
 
 	func reachable() -> String:
-		return "" if AndroidNative.available() else "This device can't open cloud documents."
+		return "" if _api().documents_available() else "This device can't open cloud documents."
 
 	func exists(ref: String) -> bool:
-		return ref != "" and bool(AndroidNative.document_info(ref).get("exists", false))
+		return ref.begins_with("content://") and bool(_api().document_info(ref).get("exists", false))
+
+	## True when the storage provider created a 0-byte placeholder (e.g. Android ACTION_CREATE_DOCUMENT
+	## on Google Drive before the first upload completes).
+	func is_empty(ref: String) -> bool:
+		if not ref.begins_with("content://"):
+			return false
+		var info: Dictionary = _api().document_info(ref)
+		return bool(info.get("exists", false)) and int(info.get("bytes", -1)) == 0
 
 	func fetch(ref: String, dest: String) -> String:
+		if not ref.begins_with("content://"):
+			return "Pick a cloud document for this world first."
 		JsonUtil.ensure_dir(dest.get_base_dir())
 		var part := dest + ".part"
-		var error := AndroidNative.copy_document_to_file(ref, part)
+		var error := ""
+		for attempt in RETRY_WAITS_MS.size() + 1:
+			if attempt > 0:
+				OS.delay_msec(RETRY_WAITS_MS[attempt - 1])
+			error = str(_api().copy_document_to_file(ref, part))
+			if error == "" or FolderStore._is_permanent_cloud_error(error):
+				break
 		if error != "":
 			DirAccess.remove_absolute(part)
 			return error
-		if FileAccess.file_exists(dest):
-			DirAccess.remove_absolute(dest)
-		if DirAccess.rename_absolute(part, dest) != OK:
-			DirAccess.remove_absolute(part)
-			return "Couldn't save the cloud copy on this device (is storage full?)."
-		return ""
+		return FolderStore._atomic_finish_fetch(part, dest, "Couldn't save the cloud copy on this device (is storage full?).")
 
 	func publish(ref: String, source: String) -> String:
-		return AndroidNative.copy_file_to_document(source, ref)
+		if not ref.begins_with("content://"):
+			return "Pick a cloud document for this world first."
+		var error := ""
+		for attempt in RETRY_WAITS_MS.size() + 1:
+			if attempt > 0:
+				OS.delay_msec(RETRY_WAITS_MS[attempt - 1])
+			error = str(_api().copy_file_to_document(source, ref))
+			if error == "" or FolderStore._is_permanent_cloud_error(error):
+				break
+		return error
 
 	## Android offers no folder to look through: each world's document is picked by the player.
 	func list() -> PackedStringArray:
 		return PackedStringArray()
 
 	func label(ref: String) -> String:
-		var name := str(AndroidNative.document_info(ref).get("name", ""))
+		if not ref.begins_with("content://"):
+			return "the document you picked"
+		var name := str(_api().document_info(ref).get("name", ""))
 		return name if name != "" else "the document you picked"
+
+
+## Android cloud folder picked via ACTION_OPEN_DOCUMENT_TREE (DriveSync, Syncthing, Nextcloud, local/SD).
+## Also seamlessly handles worlds whose ref is already a direct content:// document URI (Google Drive).
+class TreeStore extends RefCounted:
+	const AndroidNative := preload("res://scripts/core/android_native.gd")
+
+	var tree_uri := ""
+	var _backend: Variant = null
+
+	func _init(uri: String = "", custom_backend: Variant = null) -> void:
+		tree_uri = uri
+		_backend = custom_backend
+
+	func _api() -> Variant:
+		return _backend if _backend != null else AndroidNative
+
+	func _docs() -> DocumentStore:
+		return DocumentStore.new(_backend)
+
+	func kind() -> String:
+		return "folder"
+
+	## Returns "" so CloudSync.discover() reads packages into cloud/work via fetch().
+	func path_of(_ref: String) -> String:
+		return ""
+
+	func reachable() -> String:
+		if tree_uri == "":
+			return "No cloud folder is chosen yet."
+		if not _api().tree_available():
+			return "This device can't open cloud folders."
+		if not bool(_api().tree_info(tree_uri).get("exists", false)):
+			return "The cloud folder can't be reached. Choose it again in Settings > Cloud sync."
+		return ""
+
+	func exists(ref: String) -> bool:
+		if ref == "":
+			return false
+		if ref.begins_with("content://"):
+			return _docs().exists(ref)
+		return tree_uri != "" and bool(_api().tree_document_info(tree_uri, ref).get("exists", false))
+
+	func is_empty(ref: String) -> bool:
+		if ref == "":
+			return false
+		if ref.begins_with("content://"):
+			return _docs().is_empty(ref)
+		var info: Dictionary = _api().tree_document_info(tree_uri, ref)
+		return bool(info.get("exists", false)) and int(info.get("bytes", -1)) == 0
+
+	func fetch(ref: String, dest: String) -> String:
+		if ref.begins_with("content://"):
+			return _docs().fetch(ref, dest)
+		var problem := reachable()
+		if problem != "":
+			return problem
+		JsonUtil.ensure_dir(dest.get_base_dir())
+		var part := dest + ".part"
+		var error := ""
+		for attempt in RETRY_WAITS_MS.size() + 1:
+			if attempt > 0:
+				OS.delay_msec(RETRY_WAITS_MS[attempt - 1])
+			error = str(_api().tree_copy_to_file(tree_uri, ref, part))
+			if error == "" or FolderStore._is_permanent_cloud_error(error):
+				break
+		if error != "":
+			DirAccess.remove_absolute(part)
+			return error
+		return FolderStore._atomic_finish_fetch(part, dest, "Couldn't save the cloud copy on this device (is storage full?).")
+
+	func publish(ref: String, source: String) -> String:
+		if ref.begins_with("content://"):
+			return _docs().publish(ref, source)
+		var problem := reachable()
+		if problem != "":
+			return problem
+		var error := ""
+		for attempt in RETRY_WAITS_MS.size() + 1:
+			if attempt > 0:
+				OS.delay_msec(RETRY_WAITS_MS[attempt - 1])
+			error = str(_api().tree_copy_from_file(source, tree_uri, ref))
+			if error == "" or FolderStore._is_permanent_cloud_error(error):
+				break
+		return error
+
+	func list() -> PackedStringArray:
+		if reachable() != "":
+			return PackedStringArray()
+		return _api().tree_list(tree_uri)
+
+	func label(ref: String) -> String:
+		if ref.begins_with("content://"):
+			return _docs().label(ref)
+		var folder_name := str(_api().tree_info(tree_uri).get("name", ""))
+		if folder_name == "":
+			folder_name = "cloud folder"
+		return "%s/%s" % [folder_name, ref]
 
 
 ## Folders on this PC that cloud apps usually keep in step, for the "choose a folder" screen:

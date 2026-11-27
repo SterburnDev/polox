@@ -70,15 +70,16 @@ client secret** for any cloud service, in any build.
 
 **On an Android phone (the Polox app)**
 
-1. Install your cloud's own app (Google Drive, OneDrive...) and sign in there.
-2. To bring a world over: Settings > Cloud sync > **Add a world from the cloud…** opens Android's file
-   picker; go to your cloud storage and pick the world's `.poloxsync` file.
-3. To send a world that started on the phone: switch on **Keep in the cloud** for it; the picker asks
-   where to save its file. Put it in the same cloud folder the PC uses, and on the PC it appears under
-   "In the cloud folder, not on this device".
+There are two ways on Android (use whichever fits your setup — Polox never asks for a password):
 
-Android gives Polox access to exactly the documents you pick and nothing else. No storage permission is
-requested.
+1. **Google Drive / OneDrive / Dropbox (direct files — zero extra apps needed):**
+   - Switch on **Keep in the cloud** for any world; Android's picker lets you save its `.poloxsync` file right into **Google Drive** (for example `My Drive/Polox`).
+   - To bring a world from your PC onto Android: Settings > Cloud sync > **Add a world from Google Drive / Cloud…** (or Worlds > **Import .polox**) and pick its `.poloxsync` file in Drive.
+   - If Android revokes access or you move a file in Drive, tap **Relink file…** on the world's prompt to reconnect it without losing sync history.
+2. **Synced Cloud Folder (`Choose a cloud folder…`, optional):**
+   - Uses Android's `ACTION_OPEN_DOCUMENT_TREE` so players using **DriveSync / Autosync for Google Drive**, **Syncthing**, **Nextcloud**, or a local/SD `Polox` folder can pick one folder and get automatic multi-world discovery and 1-tap **Keep in the cloud**.
+
+Android gives Polox persistent access to only the specific document or folder you pick. No broad storage permission is requested, and no Google OAuth client secret or API token is bundled.
 
 **In a browser:** the browser version plays through Phone Link and has no cloud sync of its own.
 

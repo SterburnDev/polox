@@ -158,6 +158,17 @@ func enable(slot_id: String, ref: String = "") -> Dictionary:
 	return {"ok": _remember(slot_id, world), "error": ""}
 
 
+## Updates where an already-synced world's cloud copy lives without losing sync history.
+func relink(slot_id: String, new_ref: String) -> Dictionary:
+	if new_ref == "":
+		return {"ok": false, "error": "Choose where this world's cloud copy goes first."}
+	var world := world_state(slot_id)
+	if world.is_empty():
+		return enable(slot_id, new_ref)
+	world["ref"] = new_ref
+	return {"ok": _remember(slot_id, world), "error": ""}
+
+
 ## Stops syncing a world on this device. The cloud's package and this device's world both stay as
 ## they are; only the link is forgotten.
 func disable(slot_id: String) -> void:
@@ -205,10 +216,15 @@ func check(slot_id: String) -> Dictionary:
 		if str(world.get("base_revision_id", "")) == "":
 			return _with(result, "not_uploaded", "This world hasn't been sent to the cloud yet.")
 		return _with(result, "cloud_missing", "This world's cloud copy is gone from %s." % store.label(ref))
+	if str(world.get("base_revision_id", "")) == "" and store.has_method("is_empty") and store.is_empty(ref):
+		# Android's ACTION_CREATE_DOCUMENT (Google Drive, Files) creates a 0-byte file before upload.
+		return _with(result, "not_uploaded", "This world hasn't been sent to the cloud yet.")
 	var copy := _work_file(str(world.world_uid), "check")
 	problem = str(store.fetch(ref, copy))
 	if problem != "":
 		return _with(result, "unreachable", problem)
+	if str(world.get("base_revision_id", "")) == "" and _file_size(copy) == 0:
+		return _with(result, "not_uploaded", "This world hasn't been sent to the cloud yet.")
 	result.package = copy
 	var checked := CloudPackage.validate(copy)
 	if not checked.ok:
@@ -233,6 +249,15 @@ static func _with(result: Dictionary, state: String, detail: String) -> Dictiona
 	result.state = state
 	result.detail = detail
 	return result
+
+
+static func _file_size(path: String) -> int:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return -1
+	var size := file.get_length()
+	file.close()
+	return size
 
 
 # --- One sync -----------------------------------------------------------------------------------------
@@ -349,8 +374,16 @@ func _push(slot_id: String, looked: Dictionary, out: Dictionary) -> void:
 		out.error = problem
 		out.state = "unreachable"
 		return
-	# Read it back: only a package that arrived whole becomes the new base.
-	if _revision_in_store(world) != revision_id:
+	# Read it back: only a package that arrived whole becomes the new base. Cloud providers
+	# (e.g. Google Drive on Android) may need a brief moment to expose the updated file.
+	var confirmed := false
+	for wait_ms in [0, 350, 900]:
+		if wait_ms > 0:
+			OS.delay_msec(wait_ms)
+		if _revision_in_store(world) == revision_id:
+			confirmed = true
+			break
+	if not confirmed:
 		out.error = "The upload couldn't be confirmed. Your world is safe on this device; sync again."
 		return
 	_store_base(world, outgoing)

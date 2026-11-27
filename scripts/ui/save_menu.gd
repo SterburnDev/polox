@@ -12,7 +12,11 @@ const SaveCard := preload("res://scripts/ui/save_card.gd")
 const SlotActions := preload("res://scripts/ui/slot_actions.gd")
 const TrashPanel := preload("res://scripts/ui/trash_panel.gd")
 const MenuLook := preload("res://scripts/ui/save_menu_look.gd")
+const CloudService := preload("res://scripts/sync/cloud_service.gd")
+const CloudPackage := preload("res://scripts/sync/cloud_package.gd")
+const AndroidNative := preload("res://scripts/core/android_native.gd")
 
+const PICK_IMPORT := "worlds_import"
 const SORTS := [["played", "Last played"], ["name", "Name"], ["playtime", "Playtime"], ["created", "Newest"]]
 
 var prefs: Dictionary = {}
@@ -57,10 +61,21 @@ func _ready() -> void:
 	bottom.add_child(_count)
 	bottom.add_child(UiKit.button("+ New world", _new_world, 160))
 	bottom.add_child(UiKit.button("Import .polox", _import, 170))
+	if CloudService.supported():
+		var cloud_btn := UiKit.button("☁ Cloud", _open_cloud_sync, 130)
+		cloud_btn.name = "CloudButton"
+		bottom.add_child(cloud_btn)
 	bottom.add_child(UiKit.button("Trash", _trash, 100))
 	bottom.add_child(UiKit.button("Look", _look, 100))
 	body.add_child(bottom)
+	if OS.has_feature("android") and AndroidNative.documents_available():
+		AndroidNative.connect_document_picked(_on_android_import_picked)
 	refresh()
+
+
+func _exit_tree() -> void:
+	if OS.has_feature("android") and AndroidNative.documents_available():
+		AndroidNative.disconnect_document_picked(_on_android_import_picked)
 
 
 func _set_pref(key: String, value: Variant) -> void:
@@ -168,7 +183,17 @@ func _look() -> void:
 	_open_sub(l)
 
 
+func _open_cloud_sync() -> void:
+	var shell := get_tree().current_scene
+	if shell and shell.has_method("open_cloud_sync_settings"):
+		shell.open_cloud_sync_settings()
+
+
 func _import() -> void:
+	if OS.has_feature("android") and AndroidNative.documents_available():
+		if not AndroidNative.pick_document_to_open(PICK_IMPORT):
+			GameState.notify("This phone can't open the file picker.")
+		return
 	var fd := FileDialog.new()
 	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	fd.access = FileDialog.ACCESS_FILESYSTEM
@@ -184,6 +209,29 @@ func _import() -> void:
 	fd.canceled.connect(fd.queue_free)
 	add_child(fd)
 	fd.popup_centered(Vector2i(900, 600))
+
+
+func _on_android_import_picked(purpose: String, uri: String) -> void:
+	if purpose != PICK_IMPORT or uri == "":
+		return
+	var tmp := SaveManager.root.path_join("cloud/work/worlds_import.tmp")
+	preload("res://scripts/core/json_util.gd").ensure_dir(tmp.get_base_dir())
+	var err := AndroidNative.copy_document_to_file(uri, tmp)
+	if err != "":
+		AndroidNative.release_document(uri)
+		GameState.notify(err)
+		return
+	if CloudPackage.validate(tmp).ok:
+		DirAccess.remove_absolute(tmp)
+		var added := CloudService.engine().add_from_cloud(uri)
+		GameState.notify(("Added \"%s\" from the cloud ✓" % Slots.meta(str(added.slot_id)).name) if added.ok else str(added.error))
+		refresh()
+		return
+	var r := SlotArchive.import_bundle(tmp)
+	DirAccess.remove_absolute(tmp)
+	AndroidNative.release_document(uri)
+	GameState.notify(("Imported as \"%s\" ✓" % Slots.meta(r.id).name) if r.ok else ("Couldn't import: " + str(r.error)))
+	refresh()
 
 
 ## Sub-panels open on top of this screen (Main's back stack handles them).

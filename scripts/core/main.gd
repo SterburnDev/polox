@@ -645,6 +645,13 @@ func open_phone_link_settings() -> void:
 	open_panel(s)
 
 
+func open_cloud_sync_settings() -> void:
+	var s := SettingsScreen.new()
+	s.main = self
+	s.start_on = "Cloud sync"
+	open_panel(s)
+
+
 ## Switches the server on with the saved settings. Returns "" or an error.
 func start_phone_link() -> String:
 	configure_phone_link()

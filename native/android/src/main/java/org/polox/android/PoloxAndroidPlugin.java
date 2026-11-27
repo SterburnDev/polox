@@ -76,10 +76,14 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
         return null;
     }
 
-    /** The file picker closed: tell the game which document was picked (or that none was). */
+    /** The file or folder picker closed: tell the game which address was picked (or that none was). */
     @Override
     public void onMainActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode != CloudDocuments.REQUEST_CREATE && requestCode != CloudDocuments.REQUEST_OPEN) return;
+        if (requestCode != CloudDocuments.REQUEST_CREATE
+                && requestCode != CloudDocuments.REQUEST_OPEN
+                && requestCode != CloudDocuments.REQUEST_TREE) {
+            return;
+        }
         String purpose = pickerPurpose;
         pickerPurpose = "";
         emitSignal(DOCUMENT_PICKED, purpose, CloudDocuments.onPicked(getActivity(), resultCode, data));
@@ -152,17 +156,23 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
     /** Cloud sync: the system picker to make a new document; the answer comes as "document_picked". */
     @UsedByGodot
     public void pickDocumentToCreate(String purpose, String suggestedName) {
-        showPicker(purpose, true, suggestedName);
+        showPicker(purpose, 0, suggestedName);
     }
 
     /** Cloud sync: the system picker to choose an existing document; the answer comes as "document_picked". */
     @UsedByGodot
     public void pickDocumentToOpen(String purpose) {
-        showPicker(purpose, false, "");
+        showPicker(purpose, 1, "");
     }
 
-    /** Pickers are windows: they start on Android's own thread, not the game's. */
-    private void showPicker(String purpose, boolean create, String suggestedName) {
+    /** Cloud sync: the system folder picker (ACTION_OPEN_DOCUMENT_TREE); answer comes as "document_picked". */
+    @UsedByGodot
+    public void pickTree(String purpose) {
+        showPicker(purpose, 2, "");
+    }
+
+    /** Pickers are windows: they start on Android's own thread, not the game's. mode: 0=create, 1=open, 2=tree. */
+    private void showPicker(String purpose, int mode, String suggestedName) {
         Activity activity = getActivity();
         if (activity == null) {
             emitSignal(DOCUMENT_PICKED, purpose, "");
@@ -170,7 +180,14 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
         }
         pickerPurpose = purpose == null ? "" : purpose;
         activity.runOnUiThread(() -> {
-            boolean shown = create ? CloudDocuments.pickToCreate(activity, suggestedName) : CloudDocuments.pickToOpen(activity);
+            boolean shown;
+            if (mode == 0) {
+                shown = CloudDocuments.pickToCreate(activity, suggestedName);
+            } else if (mode == 2) {
+                shown = CloudDocuments.pickTree(activity);
+            } else {
+                shown = CloudDocuments.pickToOpen(activity);
+            }
             if (!shown) {
                 pickerPurpose = "";
                 emitSignal(DOCUMENT_PICKED, purpose, "");
@@ -196,5 +213,30 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
     @UsedByGodot
     public void releaseDocument(String address) {
         CloudDocuments.release(getActivity(), address);
+    }
+
+    @UsedByGodot
+    public String treeInfo(String treeAddress) {
+        return CloudDocuments.treeInfo(getActivity(), treeAddress);
+    }
+
+    @UsedByGodot
+    public String treeList(String treeAddress) {
+        return CloudDocuments.treeList(getActivity(), treeAddress);
+    }
+
+    @UsedByGodot
+    public String treeDocumentInfo(String treeAddress, String fileName) {
+        return CloudDocuments.treeDocumentInfo(getActivity(), treeAddress, fileName);
+    }
+
+    @UsedByGodot
+    public String treeCopyToFile(String treeAddress, String fileName, String destPath) {
+        return CloudDocuments.treeCopyToFile(getActivity(), treeAddress, fileName, destPath);
+    }
+
+    @UsedByGodot
+    public String treeCopyFromFile(String sourcePath, String treeAddress, String fileName) {
+        return CloudDocuments.treeCopyFromFile(getActivity(), sourcePath, treeAddress, fileName);
     }
 }

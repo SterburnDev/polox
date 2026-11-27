@@ -29,9 +29,11 @@ const AndroidNative := preload("res://scripts/core/android_native.gd")
 const HEADING_SIZE := 22
 const NOTE_SIZE := 16
 const SHOWN_CONFLICTS := 4
-## Picker purposes (Android): which question a picked document answers.
+## Picker purposes (Android): which question a picked document or folder answers.
 const PICK_FOR_WORLD := "cloud_world:"
+const PICK_RELINK_WORLD := "cloud_relink:"
 const PICK_TO_ADD := "cloud_add"
+const PICK_TREE := "cloud_tree"
 
 var main: Node                       # the game's Main (owns the open world); null in some tests
 var _v: VBoxContainer
@@ -46,13 +48,13 @@ func _ready() -> void:
 	_v = UiKit.vbox(12)
 	_v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(_v)
-	if CloudService.uses_documents():
+	if CloudService.is_android():
 		AndroidNative.connect_document_picked(_on_document_picked)
 	refresh()
 
 
 func _exit_tree() -> void:
-	if CloudService.uses_documents():
+	if CloudService.is_android():
 		AndroidNative.disconnect_document_picked(_on_document_picked)
 
 
@@ -75,7 +77,9 @@ func refresh() -> void:
 		# and the explanation moves to the bottom.
 		_worlds_card()
 		_cloud_only_card()
-		if not CloudService.uses_documents():
+		if CloudService.is_android():
+			_mobile_cloud_card()
+		else:
 			_folder_card()
 		_two_ways()
 	else:
@@ -159,6 +163,10 @@ func _folder_card() -> void:
 	stop.name = "ForgetFolder"
 	row.add_child(stop)
 	card.add_child(row)
+	_auto_sync_checkbox(card)
+
+
+func _auto_sync_checkbox(card: VBoxContainer) -> void:
 	var auto := CheckBox.new()
 	auto.name = "AutoSync"
 	auto.text = "Sync by itself when Polox starts and when I leave a world"
@@ -167,6 +175,55 @@ func _folder_card() -> void:
 	auto.button_pressed = CloudService.automatic()
 	auto.toggled.connect(func(on): CloudService.set_automatic(on))
 	card.add_child(auto)
+
+
+func _mobile_cloud_card() -> void:
+	var card := _card()
+	card.name = "MobileCloudCard"
+	card.add_child(UiKit.label("Google Drive & cloud storage on Android", 20))
+	if CloudService.uses_tree():
+		var info := AndroidNative.tree_info(CloudService.tree_uri())
+		var folder_name := str(info.get("name", "Cloud folder"))
+		if folder_name == "":
+			folder_name = "Cloud folder"
+		var name_label := UiKit.para(folder_name, 18)
+		name_label.name = "FolderPath"
+		card.add_child(name_label)
+		var problem := str(CloudService.store().reachable())
+		var status := UiKit.para("✓ Ready" if problem == "" else "⚠ " + problem, NOTE_SIZE, ThemeBuilder.CREAM if problem == "" else ThemeBuilder.YELLOW)
+		status.name = "FolderStatus"
+		card.add_child(status)
+		var row := UiKit.flow_row(8)
+		var change := UiKit.button("Change folder…", _pick_tree_folder, 0)
+		change.name = "ChooseTreeFolder"
+		row.add_child(change)
+		var switch_docs := UiKit.button("Switch to Google Drive files", _forget_tree_folder, 0)
+		switch_docs.name = "ForgetTreeFolder"
+		row.add_child(switch_docs)
+		card.add_child(row)
+	else:
+		card.add_child(UiKit.para("Google Drive works directly: switch on \"Keep in the cloud\" on a world to save it into Google Drive (for example My Drive › Polox), or add a .poloxsync world from Google Drive above. Polox never asks for your Google password.", NOTE_SIZE))
+		if AndroidNative.tree_available():
+			var row := UiKit.flow_row(8)
+			var pick_tree := UiKit.button("Choose a cloud folder…", _pick_tree_folder, 0)
+			pick_tree.name = "ChooseTreeFolder"
+			row.add_child(pick_tree)
+			row.add_child(UiKit.para("Optional: for DriveSync, Syncthing, Nextcloud, or a local folder.", NOTE_SIZE, ThemeBuilder.MUTED))
+			card.add_child(row)
+	_auto_sync_checkbox(card)
+
+
+func _pick_tree_folder() -> void:
+	if not AndroidNative.pick_tree(PICK_TREE):
+		_say("This phone can't open the folder picker.")
+
+
+func _forget_tree_folder() -> void:
+	var old_uri := CloudService.tree_uri()
+	if old_uri != "":
+		AndroidNative.release_tree(old_uri)
+	CloudService.set_tree_uri("")
+	_say("Using Google Drive / picked files now. Existing links keep working.")
 
 
 func _browse() -> void:
@@ -210,10 +267,11 @@ func _worlds_card() -> void:
 	top.add_child(sync_all)
 	card.add_child(top)
 	var engine := CloudService.engine()
-	var look_now := not CloudService.uses_documents()   # (a cloud document may need the network: only on request)
+	var look_now := not CloudService.is_android()   # (Android cloud reads may use the network: check on Sync now)
 	for world in Slots.list():
 		var slot_id := str(world.id)
-		var is_synced := not engine.world_state(slot_id).is_empty()
+		var wstate := engine.world_state(slot_id)
+		var is_synced := not wstate.is_empty()
 		var row := UiKit.flow_row(8)
 		row.name = "World_" + slot_id
 		var name_label := UiKit.label("%s %s" % [str(world.get("emoji", "")), str(world.get("name", slot_id))], 18)
@@ -227,7 +285,8 @@ func _worlds_card() -> void:
 		row.add_child(keep)
 		if is_synced:
 			var state := str(engine.check(slot_id).state) if look_now else ""
-			var state_label := UiKit.label(CloudService.state_text(state) if state != "" else "Tap Sync now to check", NOTE_SIZE, ThemeBuilder.MUTED)
+			var fallback_state := "Google Drive / Cloud file · Tap Sync now" if str(wstate.get("ref", "")).begins_with("content://") else "In cloud folder · Tap Sync now"
+			var state_label := UiKit.label(CloudService.state_text(state) if state != "" else fallback_state, NOTE_SIZE, ThemeBuilder.MUTED)
 			state_label.name = "State"
 			row.add_child(state_label)
 			var now := UiKit.button("Sync now", func(): _sync(slot_id), 0)
@@ -243,7 +302,8 @@ func _question(card: VBoxContainer, slot_id: String, result: Dictionary) -> void
 	var box := UiKit.vbox(6)
 	box.name = "Question_" + slot_id
 	var answers := UiKit.flow_row(8)
-	match str(result.get("state", "")):
+	var state := str(result.get("state", ""))
+	match state:
 		"both_changed":
 			box.add_child(UiKit.para("This world changed on this device and on another one, in the same places. Nothing has been changed yet:", NOTE_SIZE, ThemeBuilder.YELLOW))
 			var conflicts: Array = result.get("conflicts", [])
@@ -259,6 +319,7 @@ func _question(card: VBoxContainer, slot_id: String, result: Dictionary) -> void
 		"cloud_missing":
 			box.add_child(UiKit.para("This world's file is gone from the cloud. If you removed it on purpose, switch \"Keep in the cloud\" off. If not:", NOTE_SIZE, ThemeBuilder.YELLOW))
 			_answer(answers, "Send this device's copy again", "Upload", slot_id, "upload")
+			_add_relink_button(answers, slot_id)
 			box.add_child(answers)
 		"cloud_damaged":
 			box.add_child(UiKit.para(str(result.get("error", "")) + " It may still be uploading from the other device: wait a little and sync again. If it stays like this:", NOTE_SIZE, ThemeBuilder.YELLOW))
@@ -266,7 +327,20 @@ func _question(card: VBoxContainer, slot_id: String, result: Dictionary) -> void
 			box.add_child(answers)
 		_:
 			box.add_child(UiKit.para(str(result.get("error", "")), NOTE_SIZE, ThemeBuilder.YELLOW))
+			if CloudService.is_android() and state in ["unreachable", "wrong_world"]:
+				_add_relink_button(answers, slot_id)
+				box.add_child(answers)
 	card.add_child(box)
+
+
+func _add_relink_button(row: Container, slot_id: String) -> void:
+	if not CloudService.is_android() or not AndroidNative.documents_available():
+		return
+	var relink := UiKit.button("Relink file…", func():
+		if not AndroidNative.pick_document_to_open(PICK_RELINK_WORLD + slot_id):
+			_say("This phone can't open the file picker."), 0)
+	relink.name = "Relink"
+	row.add_child(relink)
 
 
 func _answer(row: Container, text: String, node_name: String, slot_id: String, choice: String) -> void:
@@ -278,15 +352,16 @@ func _answer(row: Container, text: String, node_name: String, slot_id: String, c
 func _set_synced(slot_id: String, on: bool) -> void:
 	var engine := CloudService.engine()
 	if not on:
-		if CloudService.uses_documents():
-			AndroidNative.release_document(str(engine.world_state(slot_id).get("ref", "")))   # (hand the grant back)
+		var old_ref := str(engine.world_state(slot_id).get("ref", ""))
+		if old_ref.begins_with("content://"):
+			AndroidNative.release_document(old_ref)   # (hand the grant back)
 		engine.disable(slot_id)
 		_results.erase(slot_id)
 		_say("That world stays on this device only. Its file in the cloud is left where it is.")
 		return
 	if CloudService.uses_documents():
 		# Android: the player says where the world's cloud document goes; _on_document_picked finishes.
-		var suggested := "%s.%s" % [str(Slots.meta(slot_id).get("name", "World")).validate_filename(), CloudPackage.EXTENSION]
+		var suggested := CloudPackage.file_name(str(Slots.meta(slot_id).get("name", "World")), str(Slots.meta(slot_id).get("id", slot_id)))
 		if not AndroidNative.pick_document_to_create(PICK_FOR_WORLD + slot_id, suggested):
 			_say("This phone can't open the file picker.")
 		return
@@ -301,9 +376,26 @@ func _on_document_picked(purpose: String, uri: String) -> void:
 	if uri == "":
 		refresh()   # (backed out: the switch goes back)
 		return
-	if purpose == PICK_TO_ADD:
+	if purpose == PICK_TREE:
+		var old_tree := CloudService.tree_uri()
+		if old_tree != "" and old_tree != uri:
+			AndroidNative.release_tree(old_tree)
+		CloudService.set_tree_uri(uri)
+		_say("Cloud folder set. Switch on \"Keep in the cloud\" for the worlds you want there.")
+	elif purpose == PICK_TO_ADD:
 		var added := CloudService.engine().add_from_cloud(uri)
 		_say("%s is on this phone now (Worlds)." % str(Slots.meta(str(added.slot_id)).get("name", "It")) if added.ok else str(added.error))
+	elif purpose.begins_with(PICK_RELINK_WORLD):
+		var slot_id := purpose.trim_prefix(PICK_RELINK_WORLD)
+		var engine := CloudService.engine()
+		var old_ref := str(engine.world_state(slot_id).get("ref", ""))
+		if old_ref.begins_with("content://") and old_ref != uri:
+			AndroidNative.release_document(old_ref)
+		var relinked := engine.relink(slot_id, uri)
+		if relinked.ok:
+			_sync(slot_id)
+		else:
+			_say(str(relinked.error))
 	elif purpose.begins_with(PICK_FOR_WORLD):
 		var slot_id := purpose.trim_prefix(PICK_FOR_WORLD)
 		var enabled := CloudService.engine().enable(slot_id, uri)
@@ -371,34 +463,43 @@ func _say(text: String) -> void:
 
 func _cloud_only_card() -> void:
 	if CloudService.uses_documents():
-		var card := _card()
-		card.add_child(UiKit.label("A world from another device", 20))
-		card.add_child(UiKit.para("Pick its file where your cloud app keeps it (it ends in .poloxsync).", NOTE_SIZE))
-		var add := UiKit.button("Add a world from the cloud…", func():
-			if not AndroidNative.pick_document_to_open(PICK_TO_ADD):
-				_say("This phone can't open the file picker."), 0)
-		add.name = "AddFromCloud"
-		card.add_child(add)
+		_add_from_cloud_card("Bring a world from Google Drive / Cloud",
+			"Pick a .poloxsync file in Google Drive, OneDrive, Dropbox, or Files (for example My Drive › Polox from your PC).",
+			"Add a world from Google Drive / Cloud…")
 		return
 	var elsewhere: Array = CloudService.engine().discover().filter(func(entry): return str(entry.slot_id) == "" or bool(entry.duplicate))
-	if elsewhere.is_empty():
-		return
-	var found := _card()
-	found.name = "CloudOnlyCard"
-	found.add_child(UiKit.label("In the cloud folder, not on this device", 20))
-	for entry in elsewhere:
-		var row := UiKit.flow_row(8)
-		var from := " · from %s" % str(entry.device_name) if str(entry.device_name) != "" else ""
-		var when := " · %s" % str(entry.saved_at).left(10) if str(entry.saved_at) != "" else ""
-		if bool(entry.duplicate):
-			row.add_child(UiKit.para("A second file for \"%s\"%s%s. Your cloud app kept two versions (%s)." % [str(entry.world_name), from, when, str(entry.ref)], NOTE_SIZE))
-			row.add_child(UiKit.button("Bring it here as a separate world", func(): _add(str(entry.ref), true), 0))
-		else:
-			row.add_child(UiKit.label("%s%s%s" % [str(entry.world_name), from, when], 18))
-			var bring := UiKit.button("Bring it here", func(): _add(str(entry.ref), false), 0)
-			bring.name = "Bring"
-			row.add_child(bring)
-		found.add_child(row)
+	if not elsewhere.is_empty():
+		var found := _card()
+		found.name = "CloudOnlyCard"
+		found.add_child(UiKit.label("In the cloud folder, not on this device", 20))
+		for entry in elsewhere:
+			var row := UiKit.flow_row(8)
+			var from := " · from %s" % str(entry.device_name) if str(entry.device_name) != "" else ""
+			var when := " · %s" % str(entry.saved_at).left(10) if str(entry.saved_at) != "" else ""
+			if bool(entry.duplicate):
+				row.add_child(UiKit.para("A second file for \"%s\"%s%s. Your cloud app kept two versions (%s)." % [str(entry.world_name), from, when, str(entry.ref)], NOTE_SIZE))
+				row.add_child(UiKit.button("Bring it here as a separate world", func(): _add(str(entry.ref), true), 0))
+			else:
+				row.add_child(UiKit.label("%s%s%s" % [str(entry.world_name), from, when], 18))
+				var bring := UiKit.button("Bring it here", func(): _add(str(entry.ref), false), 0)
+				bring.name = "Bring"
+				row.add_child(bring)
+			found.add_child(row)
+	if CloudService.is_android():
+		_add_from_cloud_card("Single file from Google Drive",
+			"You can also pick an individual .poloxsync file from Google Drive or Files.",
+			"Add a file from Google Drive…")
+
+
+func _add_from_cloud_card(heading: String, copy: String, button_text: String) -> void:
+	var card := _card()
+	card.add_child(UiKit.label(heading, 20))
+	card.add_child(UiKit.para(copy, NOTE_SIZE))
+	var add := UiKit.button(button_text, func():
+		if not AndroidNative.pick_document_to_open(PICK_TO_ADD):
+			_say("This phone can't open the file picker."), 0)
+	add.name = "AddFromCloud"
+	card.add_child(add)
 
 
 func _add(ref: String, as_copy: bool) -> void:

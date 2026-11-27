@@ -605,3 +605,151 @@ func test_the_cloud_folder_store() -> void:
 	check(away.reachable().contains("isn't there right now") and away.publish("x.poloxsync", source) != "" and away.list().is_empty(), "a folder that is away: plain words, nothing written")
 	for suggestion in CloudStore.suggested_folders():
 		check(str(suggestion.path).ends_with("/Polox") and suggestion.name != "", "suggestions are a Polox folder inside a cloud app's folder")
+
+
+class _FakeAndroidBackend extends RefCounted:
+	var tree_dir := ""
+	var doc_files := {}          # uri -> real path
+	var doc_report_unknown_size := false
+	var tree_ok := true
+
+	func documents_available() -> bool:
+		return true
+
+	func tree_available() -> bool:
+		return tree_ok
+
+	func document_info(uri: String) -> Dictionary:
+		var p := str(doc_files.get(uri, ""))
+		if p == "" or not FileAccess.file_exists(p):
+			return {"exists": false}
+		var f := FileAccess.open(p, FileAccess.READ)
+		var sz := -1 if doc_report_unknown_size else int(f.get_length())
+		if f:
+			f.close()
+		return {"exists": true, "name": p.get_file(), "bytes": sz, "modified_ms": 0}
+
+	func copy_document_to_file(uri: String, dest_path: String) -> String:
+		var p := str(doc_files.get(uri, ""))
+		if p == "" or not FileAccess.file_exists(p):
+			return "The cloud document can't be opened. Pick it again."
+		JsonUtil.ensure_dir(dest_path.get_base_dir())
+		return "" if DirAccess.copy_absolute(p, dest_path) == OK else "copy failed"
+
+	func copy_file_to_document(source_path: String, uri: String) -> String:
+		var p := str(doc_files.get(uri, ""))
+		if p == "":
+			return "The cloud document can't be written. Pick it again."
+		JsonUtil.ensure_dir(p.get_base_dir())
+		return "" if DirAccess.copy_absolute(source_path, p) == OK else "write failed"
+
+	func tree_info(_uri: String) -> Dictionary:
+		if not tree_ok or tree_dir == "" or not DirAccess.dir_exists_absolute(tree_dir):
+			return {"exists": false}
+		return {"exists": true, "name": "Google Drive Polox"}
+
+	func tree_list(_uri: String) -> PackedStringArray:
+		var out := PackedStringArray()
+		if not DirAccess.dir_exists_absolute(tree_dir):
+			return out
+		for f in DirAccess.get_files_at(tree_dir):
+			if str(f).get_extension().to_lower() == CloudPackage.EXTENSION:
+				out.append(str(f))
+		out.sort()
+		return out
+
+	func tree_document_info(_uri: String, file_name: String) -> Dictionary:
+		var p := tree_dir.path_join(file_name)
+		if not FileAccess.file_exists(p):
+			return {"exists": false}
+		var f := FileAccess.open(p, FileAccess.READ)
+		var sz := int(f.get_length()) if f else -1
+		if f:
+			f.close()
+		return {"exists": true, "name": file_name, "bytes": sz, "modified_ms": 0}
+
+	func tree_copy_to_file(_uri: String, file_name: String, dest_path: String) -> String:
+		var p := tree_dir.path_join(file_name)
+		if not FileAccess.file_exists(p):
+			return "That world isn't in the cloud folder."
+		JsonUtil.ensure_dir(dest_path.get_base_dir())
+		return "" if DirAccess.copy_absolute(p, dest_path) == OK else "copy failed"
+
+	func tree_copy_from_file(source_path: String, _uri: String, file_name: String) -> String:
+		JsonUtil.ensure_dir(tree_dir)
+		return "" if DirAccess.copy_absolute(source_path, tree_dir.path_join(file_name)) == OK else "write failed"
+
+
+func test_android_empty_google_drive_document_and_relink() -> void:
+	_start("android_doc")
+	var api := _FakeAndroidBackend.new()
+	var doc_path := cloud_dir.path_join("robin.poloxsync")
+	var doc_uri := "content://com.google.android.apps.docs.storage/document/1"
+	api.doc_files[doc_uri] = doc_path
+	# Simulate Android ACTION_CREATE_DOCUMENT creating an empty 0-byte Google Drive placeholder.
+	_write_bytes(doc_path, PackedByteArray())
+	var store := CloudStore.DocumentStore.new(api)
+	var phone := CloudSync.new(base_dir.path_join("phone"), store, "Android phone")
+	_make_world(phone)
+	check(phone.enable(SLOT, doc_uri).ok, "links picked Google Drive document")
+	eq(phone.check(SLOT).state, "not_uploaded", "0-byte Google Drive placeholder reads as not_uploaded")
+	# Also verify providers that return unknown size (bytes == -1) still upload cleanly on first sync.
+	api.doc_report_unknown_size = true
+	eq(phone.check(SLOT).state, "not_uploaded", "unknown-size 0-byte placeholder reads as not_uploaded")
+	api.doc_report_unknown_size = false
+	var first := phone.sync(SLOT)
+	check(first.ok and first.action == "pushed", "first sync uploads to Google Drive: " + str(first.error))
+	check(CloudPackage.validate(doc_path).ok, "Google Drive document holds a valid package")
+	# Truncating an already-synced document is STILL caught as cloud_damaged!
+	_write_bytes(doc_path, PackedByteArray())
+	eq(phone.check(SLOT).state, "cloud_damaged", "0-byte document after initial sync is reported damaged")
+	var damaged_sync := phone.sync(SLOT)
+	check(not damaged_sync.ok and damaged_sync.action == "ask", "and asks before overwriting")
+	# Relink preserves sync state while switching to a replacement Google Drive URI.
+	var new_path := cloud_dir.path_join("robin_moved.poloxsync")
+	var new_uri := "content://com.google.android.apps.docs.storage/document/2"
+	api.doc_files[new_uri] = new_path
+	_write_bytes(new_path, PackedByteArray())
+	check(CloudPackage.build(_world(phone), new_path, {
+		"world_uid": str(phone.world_state(SLOT).world_uid), "world_name": "Robin's World",
+		"revision_id": str(phone.world_state(SLOT).base_revision_id),
+		"revision": int(phone.world_state(SLOT).revision),
+		"history": phone.world_state(SLOT).history,
+		"device_id": phone.device_id(), "device_name": "Android phone",
+	}).ok, "moved copy exists at new URI")
+	check(phone.relink(SLOT, new_uri).ok, "relinks without losing history")
+	_edit_json(_world(phone).path_join("rooms/home.json"), "wall", "sky")
+	var after_relink := phone.sync(SLOT)
+	check(after_relink.ok and after_relink.action == "pushed", "pushes revision 2 cleanly after relink: " + str(after_relink.error))
+
+
+func test_android_tree_store_and_hybrid_document_refs() -> void:
+	_start("android_tree")
+	var api := _FakeAndroidBackend.new()
+	api.tree_dir = cloud_dir
+	var tree_uri := "content://com.android.externalstorage.documents/tree/primary%3APolox"
+	var android := CloudSync.new(base_dir.path_join("android"), CloudStore.TreeStore.new(tree_uri, api), "Android phone")
+	var pc := _device("pc")
+	_make_world(android)
+	check(android.enable(SLOT).ok, "TreeStore lets enable() pick the filename automatically")
+	var pushed := android.sync(SLOT)
+	check(pushed.ok and pushed.action == "pushed", "pushes into the Android SAF cloud folder: " + str(pushed.error))
+	# PC discovers Android's world in the shared folder and adds a second world.
+	var found := pc.discover()
+	eq(found.size(), 1, "PC discovers Android's world in the cloud folder")
+	_make_world(pc, "beach")
+	_edit_json(_world(pc, "beach").path_join("slot.json"), "name", "Beach House")
+	check(pc.enable("beach").ok and pc.sync("beach").ok, "PC publishes a second world")
+	eq(android.discover().filter(func(e): return str(e.slot_id) == "").size(), 1, "Android TreeStore discovers the PC's world")
+	var brought := android.add_from_cloud(str(pc.world_state("beach").ref))
+	check(brought.ok and brought.slot_id == "beach_house", "Android brings it in from TreeStore")
+	eq(android.check("beach_house").state, "synced", "synced via TreeStore")
+	# Hybrid world: a direct content:// Google Drive ref keeps syncing even when TreeStore is active.
+	var doc_path := base_dir.path_join("drive/direct.poloxsync")
+	var doc_uri := "content://com.google.android.apps.docs.storage/document/99"
+	api.doc_files[doc_uri] = doc_path
+	_write_bytes(doc_path, PackedByteArray())
+	_make_world(android, "solo")
+	check(android.enable("solo", doc_uri).ok, "links a direct content:// document while TreeStore is active")
+	var hybrid_push := android.sync("solo")
+	check(hybrid_push.ok and hybrid_push.action == "pushed", "direct Google Drive ref still pushes through TreeStore: " + str(hybrid_push.error))
