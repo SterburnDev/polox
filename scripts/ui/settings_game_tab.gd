@@ -143,6 +143,7 @@ func _audio(v: VBoxContainer) -> void:
 	sfx.value_changed.connect(func(x): _apply("sfx_volume", x))
 	_check(v, "Voice blips", "text_blips", true)
 	_check(v, "Button clicks", "ui_sounds", true, "UiSounds")
+	preload("res://scripts/ui/settings_voice.gd").add_rows(v)
 
 
 func _controls(v: VBoxContainer) -> void:

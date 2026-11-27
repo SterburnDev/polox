@@ -262,3 +262,24 @@ static func tree_copy_from_file(source_path: String, tree_uri: String, file_name
 ## Gives back the persistent grant for a picked cloud folder.
 static func release_tree(tree_uri: String) -> void:
 	release_document(tree_uri)
+
+
+static func speech_available() -> bool:
+	var p := _native()
+	return _has_plugin_method(p, "startSpeechInput") and bool(p.call("speechAvailable"))
+
+
+static func start_speech_input(prompt: String = "Speak to your friend") -> bool:
+	if not speech_available():
+		return false
+	_native().call("startSpeechInput", prompt)
+	return true
+
+
+static func connect_speech_result(callback: Callable) -> bool:
+	var p := _native()
+	if p == null or not p.has_signal("speech_result"):
+		return false
+	if not p.is_connected("speech_result", callback):
+		p.connect("speech_result", callback)
+	return true

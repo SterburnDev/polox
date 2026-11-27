@@ -189,7 +189,49 @@ static func resolve(ai: Dictionary) -> Dictionary:
 	out.erase("keys")
 	out["needs_key"] = preset.get("needs_key", false)
 	out["extra"] = (preset.get("extra", {}) as Dictionary).duplicate(true)
+	out["reasoning_effort"] = normalize_effort(str(ai.get("reasoning_effort", "auto")))
+	out["web_search"] = bool(ai.get("web_search", false))
 	return out
+
+
+static func effort_ids() -> Array[String]:
+	return ["auto", "off", "low", "medium", "high"]
+
+
+static func normalize_effort(raw: String) -> String:
+	var low := raw.strip_edges().to_lower()
+	if low in effort_ids():
+		return low
+	return "auto"
+
+
+static func uses_native_search(cfg: Dictionary) -> bool:
+	var preset := str(cfg.get("preset", ""))
+	var url := str(cfg.get("base_url", "")).to_lower()
+	return preset in ["gemini", "venice"] or url.contains("generativelanguage.googleapis.com") or url.contains("api.venice.ai") or url.contains("openrouter.ai")
+
+
+static func apply_reasoning_and_search(body: Dictionary, cfg: Dictionary, opts: Dictionary, allow_reasoning: bool, allow_search: bool) -> void:
+	var preset := str(cfg.get("preset", ""))
+	var url := str(cfg.get("base_url", "")).to_lower()
+	var effort := normalize_effort(str(opts.get("reasoning_effort", cfg.get("reasoning_effort", "auto"))))
+	if allow_reasoning and effort != "auto":
+		body["reasoning_effort"] = "none" if effort == "off" else effort
+	if allow_search:
+		if preset == "venice" or url.contains("api.venice.ai"):
+			var vp: Dictionary = (body.get("venice_parameters", {}) as Dictionary).duplicate()
+			vp["enable_web_search"] = "on"
+			body["venice_parameters"] = vp
+		elif url.contains("openrouter.ai"):
+			var plugins: Array = (body.get("plugins", []) as Array).duplicate()
+			var has_web := false
+			for p in plugins:
+				if p is Dictionary and str((p as Dictionary).get("id", "")) == "web":
+					has_web = true
+					break
+			if not has_web:
+				plugins.append({"id": "web"})
+			body["plugins"] = plugins
 
 
 ## Every key in the settings (so ChatLog can keep all of them out of logs).

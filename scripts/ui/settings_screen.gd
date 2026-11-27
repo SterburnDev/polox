@@ -191,6 +191,7 @@ func _build_ai(v: VBoxContainer) -> void:
 	_chatter.button_pressed = bool(ai.get("npc_chatter", true))
 	_chatter.toggled.connect(func(on): _save_ai("npc_chatter", on))
 	v.add_child(_chatter)
+	preload("res://scripts/ui/settings_ai_extras.gd").add_rows(v, func(k, val): _save_ai(k, val))
 	# Advanced (one tap): the server, the model and the limits. Open by itself for a custom server.
 	_adv_box = UiKit.vbox(10)
 	_adv_box.name = "AiAdvanced"

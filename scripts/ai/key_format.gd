@@ -106,6 +106,9 @@ static func stored(settings: Dictionary) -> PackedStringArray:
 	if lw is Dictionary:
 		for k in HELPER_SLOTS:
 			out.append(str((lw as Dictionary).get(k, "")).strip_edges())
+	var voice: Variant = settings.get("voice")
+	if voice is Dictionary:
+		out.append(str((voice as Dictionary).get("api_key", "")).strip_edges())
 	var real := PackedStringArray()
 	for k in out:
 		if k != "" and not k in real:

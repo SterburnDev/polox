@@ -446,7 +446,7 @@ func test_the_android_export_settings() -> void:
 		if str(k).begins_with("permissions/") and k != "permissions/custom_permissions" and bool(cfg.get_value(o, k, false)):
 			perms.append(str(k).trim_prefix("permissions/"))
 	perms.sort()
-	eq(perms, ["access_network_state", "access_wifi_state", "camera", "change_wifi_multicast_state", "internet", "vibrate"], "only what the app needs")
+	eq(perms, ["access_network_state", "access_wifi_state", "camera", "change_wifi_multicast_state", "internet", "record_audio", "vibrate"], "only what the app needs")
 	var ex := str(cfg.get_value(sec, "exclude_filter", ""))
 	check(str(cfg.get_value(sec, "include_filter", "")).contains("build_id.txt"), "the app carries its source build ID")
 	for f in ["tools/*", "tests/*", "build/*", "addons/polox_android/*"]:

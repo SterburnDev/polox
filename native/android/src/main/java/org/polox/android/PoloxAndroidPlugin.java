@@ -26,6 +26,7 @@ import java.util.Set;
 public final class PoloxAndroidPlugin extends GodotPlugin {
     static final SignalInfo MEMORY_WARNING = new SignalInfo("memory_warning", Integer.class);
     static final SignalInfo DOCUMENT_PICKED = new SignalInfo("document_picked", String.class, String.class);
+    static final SignalInfo SPEECH_RESULT = new SignalInfo("speech_result", String.class, String.class);
     /** TRIM_MEMORY_RUNNING_CRITICAL (Android 13 and earlier), and every level from TRIM_MEMORY_BACKGROUND up. */
     static final int RUNNING_CRITICAL = 15;
     static final int BACKGROUND = 40;
@@ -64,7 +65,7 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
 
     @Override
     public Set<SignalInfo> getPluginSignals() {
-        return new HashSet<>(Arrays.asList(MEMORY_WARNING, DOCUMENT_PICKED));
+        return new HashSet<>(Arrays.asList(MEMORY_WARNING, DOCUMENT_PICKED, SPEECH_RESULT));
     }
 
     @Override
@@ -76,9 +77,14 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
         return null;
     }
 
-    /** The file or folder picker closed: tell the game which address was picked (or that none was). */
+    /** The file picker, folder picker, or system speech sheet closed: forward its answer to Godot. */
     @Override
     public void onMainActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == AndroidSpeech.REQUEST_SPEECH) {
+            String[] parsed = AndroidSpeech.onResult(resultCode, data);
+            emitSignal(SPEECH_RESULT, parsed[0], parsed[1]);
+            return;
+        }
         if (requestCode != CloudDocuments.REQUEST_CREATE
                 && requestCode != CloudDocuments.REQUEST_OPEN
                 && requestCode != CloudDocuments.REQUEST_TREE) {
@@ -238,5 +244,24 @@ public final class PoloxAndroidPlugin extends GodotPlugin {
     @UsedByGodot
     public String treeCopyFromFile(String sourcePath, String treeAddress, String fileName) {
         return CloudDocuments.treeCopyFromFile(getActivity(), sourcePath, treeAddress, fileName);
+    }
+
+    @UsedByGodot
+    public boolean speechAvailable() {
+        return AndroidSpeech.available(getActivity());
+    }
+
+    @UsedByGodot
+    public void startSpeechInput(String prompt) {
+        Activity activity = getActivity();
+        if (activity == null) {
+            emitSignal(SPEECH_RESULT, "Speech input unavailable.", "");
+            return;
+        }
+        activity.runOnUiThread(() -> {
+            if (!AndroidSpeech.start(activity, prompt)) {
+                emitSignal(SPEECH_RESULT, "No speech recognizer available on this device.", "");
+            }
+        });
     }
 }

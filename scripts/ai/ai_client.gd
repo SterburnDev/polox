@@ -29,6 +29,7 @@ const JsonUtil := preload("res://scripts/core/json_util.gd")
 const ApiErrors := preload("res://scripts/ai/api_errors.gd")
 const RequestSig := preload("res://scripts/phone/request_sig.gd")
 const KeyFormat := preload("res://scripts/ai/key_format.gd")
+const WebSearch := preload("res://scripts/ai/web_search.gd")
 
 const MAX_RETRIES := 2
 ## How long to wait after a 429 whose provider didn't say how long.
@@ -41,9 +42,11 @@ var mock_delay_s: float = 0.6         # tests set this to 0
 var backoff_base_s: float = 1.5       # 1.5 s, then 3 s (tests shrink it)
 var mock: MockBrain = MockBrain.new()
 var limiter: RateLimiter = RateLimiter.new(20)
+var web_search: WebSearch = null
 var _json_mode_ok: bool = true        # flipped off if a provider rejects response_format
 var _max_completion := false          # an OpenAI-style server asked for max_completion_tokens instead
 var _no_temperature := false          # ...or refused temperature (reasoning models)
+var _no_reasoning := false            # ...or refused reasoning/thinking fields
 var last_switch := ""                 # why Polox switched to another Ollama model (Settings shows it)
 var ollama_answered := false          # the last ollama_models() reached Ollama (an empty list then means: no models)
 var _next_ticket: int = 0
@@ -62,6 +65,9 @@ var _pending_switch_note := ""
 
 
 func _ready() -> void:
+	web_search = WebSearch.new()
+	web_search.name = "WebSearch"
+	add_child(web_search)
 	configure({"preset": "mock"})
 
 
@@ -72,6 +78,7 @@ func configure(ai: Dictionary) -> void:
 	_json_mode_ok = true
 	_max_completion = false
 	_no_temperature = false
+	_no_reasoning = false
 	var secrets := Presets.all_keys(ai)
 	secrets.append(str(config.get("api_key", "")))
 	# The home helpers' keys too (GameState comes after this autoload: not there on the first call).
@@ -150,7 +157,8 @@ func chat(messages: Array, opts: Dictionary = {}) -> Dictionary:
 	var mine := _cancels
 	while _serving != ticket and mine == _cancels and is_inside_tree():
 		await get_tree().process_frame
-	var result: Dictionary = _stopped() if (mine != _cancels or not is_inside_tree()) else await _send_with_retries(messages, opts, mine)
+	var send_messages := messages if (mine != _cancels or not is_inside_tree()) else await _prepare_messages(messages, opts, mine)
+	var result: Dictionary = _stopped() if (mine != _cancels or not is_inside_tree()) else await _send_with_retries(send_messages, opts, mine)
 	_serving += 1
 	_pending -= 1
 	if _pending == 0:
@@ -235,7 +243,7 @@ func _chat_via_pc(messages: Array, opts: Dictionary) -> Dictionary:
 	http.timeout = PC_ANSWER_TIMEOUT_S
 	add_child(http)
 	var body := {"messages": messages, "opts": {}}
-	for k in ["max_tokens", "json", "temperature", "mock", "model"]:
+	for k in ["max_tokens", "json", "temperature", "mock", "model", "allow_web_search", "reasoning_effort"]:
 		if opts.has(k):
 			body.opts[k] = opts[k]
 	var body_text := JSON.stringify(body)
@@ -315,6 +323,9 @@ func _send_with_retries(messages: Array, opts: Dictionary, mine: int = -1) -> Di
 			if not _no_temperature and said.contains("temperature"):
 				_no_temperature = true
 				continue
+			if not _no_reasoning and (said.contains("reasoning") or said.contains("thinking") or said.contains("budget") or said.contains("think")):
+				_no_reasoning = true
+				continue
 			if _json_mode_ok and bool(opts.get("json", true)):
 				# Some models reject response_format; retry once without it (free retry).
 				_json_mode_ok = false
@@ -337,6 +348,113 @@ func _model_for(opts: Dictionary) -> String:
 	return own if own != "" and own.length() <= 120 and not own.contains("\n") else str(config.get("model", "")).strip_edges()
 
 
+func web_search_enabled(opts: Dictionary = {}) -> bool:
+	if bool(opts.get("no_web_search", false)):
+		return false
+	if opts.has("allow_web_search"):
+		return bool(opts.get("allow_web_search", false))
+	return bool(config.get("web_search", false))
+
+
+func _prepare_messages(messages: Array, opts: Dictionary, mine: int) -> Array:
+	if not web_search_enabled(opts) or Presets.uses_native_search(config) or str(config.get("preset", "")) == "pc":
+		return messages
+	if web_search == null or messages.is_empty():
+		return messages
+	var user_idx := -1
+	var user_text := ""
+	for i in range(messages.size() - 1, -1, -1):
+		var m: Variant = messages[i]
+		if m is Dictionary and str((m as Dictionary).get("role", "")) == "user":
+			user_idx = i
+			user_text = str((m as Dictionary).get("content", ""))
+			break
+	if user_idx < 0 or not web_search.should_search(user_text):
+		return messages
+	_set_status("thinking", "Searching the web...")
+	var snippets := await web_search.lookup(user_text)
+	if mine != _cancels or not is_inside_tree() or snippets == "":
+		return messages
+	var out := messages.duplicate(true)
+	out.insert(user_idx, {"role": "system", "content": snippets})
+	return out
+
+
+func _send_gemini_search(messages: Array, opts: Dictionary, mine: int) -> Dictionary:
+	var key := str(config.get("api_key", "")).strip_edges()
+	var model := _model_for(opts)
+	if key == "" or model == "":
+		return {"ok": false, "fallback_openai": true}
+	var sys_parts: PackedStringArray = PackedStringArray()
+	var contents: Array = []
+	for m in messages:
+		if not (m is Dictionary):
+			continue
+		var d := m as Dictionary
+		var role := str(d.get("role", "user"))
+		var txt := str(d.get("content", ""))
+		if txt == "":
+			continue
+		if role == "system":
+			sys_parts.append(txt)
+		else:
+			contents.append({"role": "model" if role == "assistant" else "user", "parts": [{"text": txt}]})
+	if contents.is_empty():
+		return {"ok": false, "fallback_openai": true}
+	var gen_cfg: Dictionary = {
+		"maxOutputTokens": int(opts.get("max_tokens", config.get("max_tokens", 400))),
+	}
+	if not _no_temperature:
+		gen_cfg["temperature"] = float(opts.get("temperature", config.get("temperature", 0.85)))
+	var effort := Presets.normalize_effort(str(opts.get("reasoning_effort", config.get("reasoning_effort", "auto"))))
+	if not _no_reasoning and effort != "auto":
+		var budgets := {"off": 0, "low": 512, "medium": 2048, "high": 8192}
+		gen_cfg["thinkingConfig"] = {"thinkingBudget": int(budgets.get(effort, 0))}
+	var body: Dictionary = {
+		"contents": contents,
+		"tools": [{"google_search": {}}],
+		"generationConfig": gen_cfg,
+	}
+	if not sys_parts.is_empty():
+		body["system_instruction"] = {"parts": [{"text": "\n\n".join(sys_parts)}]}
+	var url := "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % model.uri_encode()
+	var headers := PackedStringArray(["Content-Type: application/json", "x-goog-api-key: " + key])
+	var http := HTTPRequest.new()
+	http.timeout = float(config.get("timeout_s", 20))
+	add_child(http)
+	if http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(body)) != OK:
+		http.queue_free()
+		return {"ok": false, "fallback_openai": true}
+	var res: Array = await _answer(http, mine)
+	http.queue_free()
+	if mine != _cancels or not is_inside_tree():
+		return _stopped()
+	var result_code: int = int(res[0])
+	var code: int = int(res[1])
+	var raw_text: String = (res[3] as PackedByteArray).get_string_from_utf8()
+	if result_code != HTTPRequest.RESULT_SUCCESS:
+		return _interpret(res[0], res[1], res[2], res[3])
+	if code == 200:
+		var parsed: Variant = JsonUtil.parse(raw_text)
+		if parsed is Dictionary and (parsed as Dictionary).get("candidates") is Array:
+			var cands: Array = (parsed as Dictionary).get("candidates", [])
+			if not cands.is_empty() and cands[0] is Dictionary:
+				var parts: Variant = (cands[0] as Dictionary).get("content", {}).get("parts", [])
+				if parts is Array:
+					var chunks := PackedStringArray()
+					for p in parts:
+						if p is Dictionary and (p as Dictionary).has("text") and not bool((p as Dictionary).get("thought", false)):
+							chunks.append(str((p as Dictionary).get("text", "")))
+					var combined := "\n".join(chunks).strip_edges()
+					if combined != "":
+						return {"ok": true, "text": combined, "error": "", "code": 200}
+	if code == 400:
+		var msg_low := _provider_message(raw_text).to_lower()
+		if msg_low.contains("search") or msg_low.contains("tool") or msg_low.contains("grounding") or msg_low.contains("response_mime_type"):
+			return {"ok": false, "fallback_openai": true}
+	return _interpret(res[0], res[1], res[2], res[3])
+
+
 func _send_once(messages: Array, opts: Dictionary, mine: int = -1) -> Dictionary:
 	if mine < 0:
 		mine = _cancels
@@ -344,6 +462,13 @@ func _send_once(messages: Array, opts: Dictionary, mine: int = -1) -> Dictionary
 		return await _send_ollama(messages, opts, false, mine)
 	if not is_inside_tree():
 		return _stopped()
+	var preset_id := str(config.get("preset", ""))
+	var base := str(config.get("base_url", "")).to_lower()
+	var want_search := web_search_enabled(opts)
+	if (preset_id == "gemini" or base.contains("generativelanguage.googleapis.com")) and want_search:
+		var gem := await _send_gemini_search(messages, opts, mine)
+		if gem.get("fallback_openai", false) == false:
+			return gem
 	var body := {"model": _model_for(opts), "messages": messages}
 	if not _no_temperature:
 		body["temperature"] = float(opts.get("temperature", config.get("temperature", 0.85)))
@@ -353,6 +478,7 @@ func _send_once(messages: Array, opts: Dictionary, mine: int = -1) -> Dictionary
 	var extra: Dictionary = config.get("extra", {})
 	for k in extra:
 		body[k] = extra[k]
+	Presets.apply_reasoning_and_search(body, config, opts, not _no_reasoning, want_search)
 	if _json_mode_ok and bool(opts.get("json", true)):
 		body["response_format"] = {"type": "json_object"}
 	var headers := PackedStringArray(["Content-Type: application/json"])
@@ -697,15 +823,22 @@ func _send_ollama(messages: Array, opts: Dictionary, healed: bool = false, mine:
 			return _fail(0, "Ollama has no models yet. Install one in the Ollama app (or: ollama pull llama3.2), then choose it in Settings > AI.", false)
 	var warm := is_ollama_warm(model)
 	_set_status("thinking", "Thinking..." if warm else "Loading %s..." % model)
+	var effort := Presets.normalize_effort(str(opts.get("reasoning_effort", config.get("reasoning_effort", "auto"))))
+	var want_think := effort in ["low", "medium", "high"]
+	var base_predict := int(opts.get("max_tokens", config.get("max_tokens", 400)))
+	if want_think and not _no_reasoning:
+		var bonus := {"low": 800, "medium": 1200, "high": 1800}
+		base_predict = maxi(base_predict, int(bonus.get(effort, base_predict)))
 	var body := {
 		"model": model,
 		"messages": messages,
 		"stream": false,
-		"think": false,   # thinking models answer straight away (their thinking would spoil the JSON)
 		"keep_alive": OLLAMA_KEEP_ALIVE,
 		"options": {"temperature": float(opts.get("temperature", config.get("temperature", 0.85))),
-			"num_predict": int(opts.get("max_tokens", config.get("max_tokens", 400))), "num_ctx": OLLAMA_CTX},
+			"num_predict": base_predict, "num_ctx": OLLAMA_CTX},
 	}
+	if not _no_reasoning:
+		body["think"] = want_think   # "auto"/"off" answer straight away; low/medium/high enable thinking
 	if _json_mode_ok and bool(opts.get("json", true)):
 		body["format"] = "json"
 	if mine != _cancels or not is_inside_tree():

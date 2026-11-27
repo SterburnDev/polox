@@ -84,6 +84,7 @@ static func more(world: Node) -> Control:
 		["World Bible", func(): main.open_panel(WorldBibleEditor.new())],
 		["Chat Log", func(): main.open_panel(LogViewer.new())],
 		["How to play", func(): main.open_panel(HelpPanel.new())],
+		["Credits", func(): main.open_credits()],
 	]
 	var m := GameMenu.new()
 	m.build(items)

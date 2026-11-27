@@ -332,6 +332,7 @@ func show_title() -> void:
 	t.connect_pressed.connect(func(): open_app_connect(false, false))
 	t.show_cloud = OS.has_feature("android") and CloudService.supported()
 	t.cloud_pressed.connect(open_cloud_sync_settings)
+	t.credits_pressed.connect(open_credits)
 	screen = t
 	ui.add_child(t)
 	_warm_world.call_deferred()
@@ -340,6 +341,10 @@ func show_title() -> void:
 	if not service_only(OS.get_cmdline_user_args()):
 		music.make_way("motif_title")   # the title's chime first, then the menu theme
 		music.play_menu()
+
+
+func open_credits() -> void:
+	open_panel(load("res://scripts/ui/credits_panel.gd").new())
 
 
 ## Checks GitHub Releases at most once every 12 hours when enabled; skipped in headless tests/CLI.
@@ -365,7 +370,7 @@ func _check_updates_at_title() -> void:
 		var latest := str(res.get("latest_version", ""))
 		if latest != "" and latest != UpdateChecker.dismissed_version() and UpdateChecker._toast_shown_version != latest:
 			UpdateChecker._toast_shown_version = latest
-			show_toast("⬆ Polox v%s is available (tap the badge or Settings > Gameplay)" % latest)
+			SettingsUpdates.toast_available(self, latest)
 
 
 ## [CLOUD_SYNC] The title screen is where worlds sync by themselves: no world is open, so files can

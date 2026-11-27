@@ -14,6 +14,7 @@ signal settings_pressed
 signal addons_pressed
 signal connect_pressed   # Polox for Android, not paired yet: Connect to your PC
 signal cloud_pressed     # Polox for Android: Cloud sync (Google Drive / folder)
+signal credits_pressed
 
 const UiKit := preload("res://scripts/ui/ui_kit.gd")
 const ThemeBuilder := preload("res://scripts/ui/theme_builder.gd")
@@ -257,6 +258,10 @@ func _build() -> void:
 	settings.name = "SettingsButton"
 	settings.tooltip_text = "Settings"
 	buttons.add_child(settings)
+	var credits := UiKit.button("Credits", func(): credits_pressed.emit())
+	credits.name = "CreditsButton"
+	credits.tooltip_text = "Credits"
+	buttons.add_child(credits)
 	if show_connect:
 		var c := UiKit.button("📱 Connect to your PC", func(): connect_pressed.emit())
 		c.name = "ConnectToPC"

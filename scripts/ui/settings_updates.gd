@@ -50,8 +50,14 @@ static func add_rows(parent: Control) -> void:
 	check_btn.name = "CheckUpdatesButton"
 	var action_btn := UiKit.button("Releases page", Callable(), 200)
 	action_btn.name = "OpenUpdateButton"
+	var credits_btn := UiKit.button("Credits", func():
+		var m := _find_main(parent)
+		if m != null and m.has_method("open_credits"):
+			m.open_credits(), 140)
+	credits_btn.name = "CreditsButton"
 	row.add_child(check_btn)
 	row.add_child(action_btn)
+	row.add_child(credits_btn)
 
 	var sync_view := func(info: Dictionary, custom_msg: String = ""):
 		if not is_instance_valid(status) or not is_instance_valid(action_btn):
@@ -64,7 +70,7 @@ static func add_rows(parent: Control) -> void:
 			status.text = "Tap Check for updates to check GitHub Releases."
 			status.add_theme_color_override("font_color", ThemeBuilder.MUTED)
 		elif bool(info.get("ok", false)) and bool(info.get("update_available", false)):
-			status.text = "⬆ Update available: %s (v%s)" % [str(info.get("title", "")), str(info.get("latest_version", ""))]
+			status.text = "Update available: %s (v%s)" % [str(info.get("title", "")), str(info.get("latest_version", ""))]
 			status.add_theme_color_override("font_color", ThemeBuilder.YELLOW)
 			action_btn.text = "Download update"
 		elif bool(info.get("ok", false)):
@@ -111,13 +117,18 @@ static func attach_title_badge(title_screen: Control, main: Node, info: Dictiona
 	var old := host.find_child("UpdateBadge", false, false)
 	if old:
 		old.queue_free()
-	var badge := UiKit.button("⬆ Update available: v%s" % str(info.get("latest_version", "")), func():
+	var badge := UiKit.button("Update available: v%s" % str(info.get("latest_version", "")), func():
 		open_update_panel(main, info), 0)
 	badge.name = "UpdateBadge"
 	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	badge.add_theme_font_size_override("font_size", 16)
 	host.add_child(badge)
 	host.move_child(badge, ver_label.get_index() + 1)
+
+
+static func toast_available(main: Node, latest: String) -> void:
+	if main != null and main.has_method("show_toast"):
+		main.show_toast("Polox v%s is available (tap the badge or Settings > Gameplay)" % latest)
 
 
 ## Opens the "Update available" dialog with Android APK or Windows release guidance and safe HTTPS links.

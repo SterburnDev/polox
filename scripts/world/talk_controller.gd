@@ -33,6 +33,7 @@ func setup(game_world: Node, box: Control) -> void:
 	dialogue.save_moment.connect(_on_save_moment)
 	dialogue.segment_started.connect(_on_segment)
 	dialogue.gift_pressed.connect(_on_gift_pressed)
+	dialogue.live_pressed.connect(_on_live_pressed)
 
 
 func is_open() -> bool:
@@ -122,6 +123,30 @@ func _on_gift_pressed() -> void:
 	bag.gift_for = talking_to
 	bag.gift_chosen.connect(give_gift)
 	world.main.open_panel(bag)
+
+
+func _on_live_pressed() -> void:
+	if talking_to == "":
+		return
+	var c := GameState.get_character(talking_to)
+	if c.is_empty():
+		return
+	var panel: Control = load("res://scripts/ui/live_convo_panel.gd").new()
+	panel.setup_session(self, talking_to, str(c.get("name", "Friend")))
+	world.main.open_panel(panel)
+
+
+func live_exchange(player_text: String) -> Dictionary:
+	var id := talking_to
+	if id == "":
+		return {"text": "", "emotion": "neutral"}
+	var reply: Dictionary = await convo.player_says(id, player_text)
+	var segs: Array = reply.get("segments", [])
+	var emo := str((segs[0] as Dictionary).get("emotion", "neutral")) if not segs.is_empty() and segs[0] is Dictionary else "neutral"
+	var text := ReplyParser.joined_text(segs)
+	if reply.get("failed", false) and str(reply.get("error", "")) != "" and text == "":
+		text = str(reply.get("error", ""))
+	return {"text": text, "emotion": emo}
 
 
 ## Gives an item from the bag to whoever you're talking to.

@@ -10,6 +10,7 @@ signal closed
 signal save_moment
 signal segment_started(emotion: String)
 signal gift_pressed
+signal live_pressed
 signal reply_chosen(text: String)
 
 const UiKit := preload("res://scripts/ui/ui_kit.gd")
@@ -111,6 +112,10 @@ func _ready() -> void:
 	var gift := UiKit.button("Gift", func(): gift_pressed.emit(), 100)
 	gift.tooltip_text = "Give a little gift from your bag (up to three per friend a day)"
 	input_row.add_child(gift)
+	var live := UiKit.button("Live", func(): live_pressed.emit(), 90)
+	live.name = "LiveButton"
+	live.tooltip_text = "Live"
+	input_row.add_child(live)
 	input_row.add_child(UiKit.button("Bye", close_box, 100))
 	# The arrow lives on the full-screen layer (a PanelContainer would stretch it).
 	arrow = UiKit.label("▼", 26, ThemeBuilder.YELLOW)
@@ -185,6 +190,10 @@ func open(display_name: String, expression_textures: Dictionary, speaker_voice: 
 	portrait.get_parent().visible = not textures.is_empty()
 	_set_portrait("neutral")
 	_fit_box()
+	arrow.visible = false
+	var live_btn := input_row.find_child("LiveButton", false, false) as Control
+	if live_btn:
+		live_btn.visible = chat
 	visible = true
 	state = "waiting"
 
@@ -275,6 +284,9 @@ func _next_segment() -> void:
 	input_row.visible = false
 	chips.visible = false
 	arrow.visible = false
+	var voice_engine := preload("res://scripts/audio/voice_engine.gd")
+	if chat_enabled and voice_engine.replaces_blips():
+		voice_engine.speak(self, str(seg.get("text", "")), str(seg.get("emotion", "neutral")), false)
 	if _speed() <= 0.0:
 		_finish_typing()
 
@@ -363,6 +375,8 @@ func _play_blip() -> void:
 
 
 func _play_voice(player: AudioStreamPlayer, v: Dictionary) -> void:
+	if preload("res://scripts/audio/voice_engine.gd").replaces_blips():
+		return
 	if not GameState.settings.get("text_blips", true):
 		return
 	player.pitch_scale = clampf(float(v.get("pitch", 1.0)), 0.5, 2.0) * randf_range(0.95, 1.05)
@@ -423,6 +437,7 @@ func _drop_keyboard() -> void:
 func close_box() -> void:
 	if not visible:
 		return
+	preload("res://scripts/audio/voice_engine.gd").stop()
 	visible = false
 	state = "hidden"
 	_queue.clear()
