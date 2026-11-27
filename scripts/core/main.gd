@@ -336,9 +336,36 @@ func show_title() -> void:
 	ui.add_child(t)
 	_warm_world.call_deferred()
 	_cloud_sync_at_title.call_deferred()
+	_check_updates_at_title.call_deferred()
 	if not service_only(OS.get_cmdline_user_args()):
 		music.make_way("motif_title")   # the title's chime first, then the menu theme
 		music.play_menu()
+
+
+## Checks GitHub Releases at most once every 12 hours when enabled; skipped in headless tests/CLI.
+func _check_updates_at_title() -> void:
+	const UpdateChecker := preload("res://scripts/core/update_checker.gd")
+	const SettingsUpdates := preload("res://scripts/ui/settings_updates.gd")
+	if not UpdateChecker.supported() or not UpdateChecker.auto_enabled():
+		return
+	if service_only(OS.get_cmdline_user_args()) or DisplayServer.get_name() == "headless" or Addons._testing() or DebugCapture.wanted():
+		return
+	var saved := UpdateChecker.cached_or_saved()
+	if bool(saved.get("ok", false)) and bool(saved.get("update_available", false)) and screen != null and is_instance_valid(screen):
+		SettingsUpdates.attach_title_badge(screen, self, saved)
+	await get_tree().create_timer(1.2).timeout
+	if game != null or not is_inside_tree():
+		return
+	var res: Dictionary = await UpdateChecker.check_now(self, false)
+	if not is_inside_tree() or game != null:
+		return
+	if bool(res.get("ok", false)) and bool(res.get("update_available", false)):
+		if screen != null and is_instance_valid(screen):
+			SettingsUpdates.attach_title_badge(screen, self, res)
+		var latest := str(res.get("latest_version", ""))
+		if latest != "" and latest != UpdateChecker.dismissed_version() and UpdateChecker._toast_shown_version != latest:
+			UpdateChecker._toast_shown_version = latest
+			show_toast("⬆ Polox v%s is available (tap the badge or Settings > Gameplay)" % latest)
 
 
 ## [CLOUD_SYNC] The title screen is where worlds sync by themselves: no world is open, so files can

@@ -39,6 +39,7 @@ folder (or uninstalling and choosing to remove your worlds) deletes all of it.
 | **Google Maps enrichment** (optional, off by default in *Helper setup*) | Your home's map coordinates and radius to discover public parks, cafes, and landmarks nearby (private residences are excluded) | Google (Gemini Maps Grounding or Google Maps Places API, depending on the mode you chose). Only runs after you turn it on and confirm each lookup; results are cached locally in `my_home/google_maps.json` |
 | **Look up my home** (optional, in Map my home) | The address you typed and your answers about the building (floors, rooms) | The research helper you picked (an online AI or an AI tool on your PC). *Nobody: just my answers* sends nothing |
 | **Phone Link** (off every time Polox starts) | Your worlds and the chat messages a paired phone asks your PC to answer | Only your own phones, over your home network or your own Tailscale. Public internet addresses are always refused, every phone needs a PIN shown on your PC, and your API key never goes to the phone |
+| **Update check** (*Settings > Gameplay > Updates*) | A plain `GET` request to check the latest public release tag (no personal data, no device ID, no save files) | GitHub (`api.github.com/repos/SterburnDev/polox/releases/latest`), at most once every 12 hours when switched on, or when you tap *Check for updates*. Can be switched off at any time |
 
 With the default **Mock** AI, or **Ollama** running on your own PC, chatting sends nothing anywhere.
 Links you press (a map, a help page) open in your own web browser.

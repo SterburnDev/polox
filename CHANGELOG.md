@@ -8,6 +8,7 @@
 - **Google Drive & Cloud folder sync on mobile (Android):**
   - Fixed Android `CloudDocuments` persistable URI permission handling, output stream truncation/flush for Google Drive, and 0-byte newly created `ACTION_CREATE_DOCUMENT` placeholders so first-time Android uploads to Google Drive succeed cleanly instead of reporting a damaged package.
   - Added Android **Cloud Folder** (`ACTION_OPEN_DOCUMENT_TREE` + `CloudStore.TreeStore`) support alongside direct **Google Drive / OneDrive / Dropbox** file picking, plus **Relink file…**, mobile `AutoSync`, `Worlds` quick `.poloxsync` import & **☁ Cloud** shortcut, and a **☁ Google Drive / Cloud** option on the mobile connect screen.
+- **Cross-platform update detection (Windows PC & Android):** Added `UpdateChecker` (`scripts/core/update_checker.gd`) and *Settings > Gameplay > Updates* + Title screen **⬆ Update available** badge (`settings_updates.gd`) checking public GitHub Releases (`SterburnDev/polox`) at most every 12 hours (toggleable, offline-safe, strict GitHub HTTPS link validation) with Android APK direct download and Windows release links.
 - **Cybersecurity touch-ups:**
   - `custom_models.gd`: added cycle detection and node-count caps (`MAX_GLTF_NODES`) on glTF node hierarchies, cumulative buffer size limits, and stride/vertex/index/triangle caps on `.glb`/`.gltf`/`.obj` imports.
   - `slot_archive.gd`: blocked executable/script extensions (`FORBIDDEN_EXTS`) and oversized single entries (`MAX_ENTRY_BYTES`) when inspecting `.polox` and backup zip bundles.

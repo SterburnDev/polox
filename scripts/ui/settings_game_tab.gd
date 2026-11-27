@@ -97,6 +97,7 @@ func _gameplay(v: VBoxContainer) -> void:
 	v.add_child(UiKit.para(SaveManager.root, 16, ThemeBuilder.MUTED))
 	if SaveManager.PersonalData.fallback_reason != "":
 		v.add_child(UiKit.para(SaveManager.PersonalData.fallback_reason, 16, ThemeBuilder.YELLOW))
+	preload("res://scripts/ui/settings_updates.gd").add_rows(v)
 
 
 func _display(v: VBoxContainer) -> void:

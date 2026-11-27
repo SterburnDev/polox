@@ -21,7 +21,7 @@ version (the release you downloaded, or the commit you built) you used. Only the
 | Imports | World archives (`.polox`, cloud packages) are checked before anything is unpacked: no absolute or `..` paths, no executable or script extensions, file-count and entry/total size limits, every file listed and matched by SHA-256 | `scripts/core/slot_archive.gd`, `scripts/sync/cloud_package.gd` |
 | Custom 3D models | Imported `.glb`, `.gltf`, and `.obj` files stay inside `models/`, and runtime parsing enforces cumulative buffer limits, cycle-free node caps, and vertex/index/triangle limits | `scripts/world/custom_models.gd` |
 | Add-ons | Pictures, sounds, words and tiles only, from inside the add-on's own folder. An add-on's scripts never run until you trust them in Title > Add-ons, and that trust is tied to a hash of the scripts: any change asks again | `scripts/core/addons.gd` |
-| Links | Only clean `http(s)` pages open from AI research or synced files, and external Google Maps URIs are checked against Google Maps HTTPS hosts | `scripts/home/research_prompt.gd`, `scripts/home/map_home_panel.gd`, `scripts/home/map_refs_panel.gd` |
+| Links | Only clean `http(s)` pages open from AI research or synced files, external Google Maps URIs are checked against Google Maps HTTPS hosts, and update links are checked against `https://github.com/SterburnDev/polox/releases` and GitHub release asset CDN hosts | `scripts/home/research_prompt.gd`, `scripts/home/map_home_panel.gd`, `scripts/home/map_refs_panel.gd`, `scripts/core/update_checker.gd` |
 
 ## Known limits
 
